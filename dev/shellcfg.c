@@ -72,10 +72,11 @@ static THD_FUNCTION(matlab_thread, p)
       tick = chVTGetSystemTimeX();
     }
 
-    txbuf_f[0] = chassis->_motors[FRONT_LEFT].speed_sp;
-    txbuf_f[1] = chassis->_motors[FRONT_LEFT]._speed;
+    txbuf_f[0] = PIMU->euler_angle[Roll];
+    txbuf_f[1] = PIMU->euler_angle[Pitch];
+    txbuf_f[2] = PIMU->euler_angle[Yaw];;
 
-    transmit_matlab(chp, NULL, txbuf_f, 0, 2);
+    transmit_matlab(chp, NULL, txbuf_f, 0, 3);
   }
 }
 
@@ -86,7 +87,7 @@ static THD_WORKING_AREA(Shell_thread_wa, 1024);
 void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
 {
   (void) argc,argv;
-//  PIMUStruct PIMU = imu_get();
+  PIMUStruct PIMU = imu_get();
 //  GimbalStruct* gimbal = gimbal_get();
 //  chassisStruct* chassis = chassis_get();
   motorPosStruct* lift = lift_get();
@@ -94,21 +95,15 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   ChassisEncoder_canStruct* encoders2 = can_getChassisMotor();
   RC_Ctl_t* rc = RC_get();
 
-  chprintf(chp,"ls0: %d\r\n",LS0_DOWN()); //FR
-  chprintf(chp,"ls1: %d\r\n",LS1_DOWN()); //BR
-  chprintf(chp,"ls2: %d\r\n",LS2_DOWN()); //BL
-  chprintf(chp,"ls3: %d\r\n",LS3_DOWN()); //FL
+  chprintf(chp,"Roll: %f\r\n",PIMU->euler_angle[Roll]); //FR
+  chprintf(chp,"Pitch: %f\r\n",PIMU->euler_angle[Pitch]); //BR
+  chprintf(chp,"Yaw: %f\r\n",PIMU->euler_angle[Yaw]); //BL
 
-/*
-  chprintf(chp,"BL: %f\r\n",lift[0]._pos);
-  chprintf(chp,"BR: %f\r\n",lift[1]._pos);
-  chprintf(chp,"FR: %f\r\n",lift[2]._pos);
-  chprintf(chp,"FL: %f\r\n",lift[3]._pos);
-  chprintf(chp,"BL: %f\r\n",lift[0]._speed);
-  chprintf(chp,"BR: %f\r\n",lift[1]._speed);
-  chprintf(chp,"FR: %f\r\n",lift[2]._speed);
-  chprintf(chp,"FL: %f\r\n",lift[3]._speed);
-*/
+  chprintf(chp,"BL: %d\r\n",lift[0].in_position);
+  chprintf(chp,"BR: %d\r\n",lift[1].in_position);
+  chprintf(chp,"FR: %d\r\n",lift[2].in_position);
+  chprintf(chp,"FL: %d\r\n",lift[3].in_position);
+
   //chprintf(chp,"Gimbal Pitch: %f\r\n",gimbal->pitch_angle);
  // chprintf(chp,"Gimbal Yaw: %f\r\n",gimbal->yaw_angle);
   //chprintf(chp,"IMU Pitch: %f\r\n",PIMU->euler_angle[Pitch]);

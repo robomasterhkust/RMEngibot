@@ -7,8 +7,8 @@
 #include "params.h"
 /* TODO something wrong*/
 typedef enum {
-  X = 0U,
-  Y = 1U,
+  X = 1U,
+  Y = 0U,
   Z = 2U
 } axis_mask_t;
 

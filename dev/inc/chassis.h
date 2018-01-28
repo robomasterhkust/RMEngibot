@@ -47,6 +47,7 @@ typedef struct{
   float _prev;
 
   uint8_t _wait_count;
+  uint8_t in_position;
 } motorPosStruct;
 
 typedef struct{

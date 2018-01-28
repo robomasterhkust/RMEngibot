@@ -281,7 +281,7 @@ uint8_t imuGetDataRaw(PIMUStruct pIMU, float AccelRaw[3], float GyroRaw[3])
   /* Y: */
   AccelRaw[Y] = (float)imuData[IMU_Y] * pIMU->_accel_psc;
   GyroRaw[Y]  = (float)imuData[IMU_Y + 3] * pIMU->_gyro_psc;
-  
+
   /* Z: */
   AccelRaw[Z] = (float)imuData[IMU_Z] * pIMU->_accel_psc;
   GyroRaw[Z]  = (float)imuData[IMU_Z + 3] * pIMU->_gyro_psc;

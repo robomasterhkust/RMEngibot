@@ -25,7 +25,7 @@ motorPosStruct* lift_get(void)
 
 #define   LIFT_ANGLE_PSC 7.6699e-4 //2*M_PI/0x1FFF
 #define   LIFT_SPEED_PSC 1.0f/((float)LIFT_GEAR_RATIO)
-#define   LIFT_CONNECTION_ERROR_COUNT 20U
+
 static void lift_encoderUpdate(void)
 {
   uint8_t i;
@@ -59,10 +59,25 @@ static void lift_encoderUpdate(void)
         motors[i]._wait_count = 1;
       }
     }
+
+    if((motors[i].pos_sp - motors[i]._pos) < 0.4f && (motors[i].pos_sp - motors[i]._pos) > -0.4f)
+      motors[i].in_position++;
+    else
+      motors[i].in_position = 0;
+
+    if(motors[i].in_position > LIFT_IN_POSITION_COUNT)
+      motors[i].in_position = LIFT_IN_POSITION_COUNT;
   }
 }
 
-#define OUTPUT_MAX  30000
+void lift_changePos(motorPosStruct* motor, const float pos_sp)
+{
+  if(pos_sp != motor->pos_sp)
+    motor->in_position = 0;
+  motor->pos_sp = pos_sp;
+}
+
+#define OUTPUT_MAX  32767
 
 #define ONFOOT_TRANSITION_TIME_MS   100
 #define ONFOOT_TRANSITION_TH        20.0f
