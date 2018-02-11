@@ -38,8 +38,8 @@
 #define LEDR_ON()       (palClearPad(GPIOE, GPIOE_LED_R))
 #define LEDR_OFF()      (palSetPad(GPIOE, GPIOE_LED_R))
 #define LEDR_TOGGLE()   (palTogglePad(GPIOE, GPIOE_LED_R))
-#define LEDY_ON()       (palClearPad(GPIOA, GPIOA_LED_Y))
-#define LEDY_OFF()      (palSetPad(GPIOA, GPIOA_LED_Y))
+#define LEDY_ON()       (palSetPad(GPIOA, GPIOA_LED_Y))
+#define LEDY_OFF()      (palClearPad(GPIOA, GPIOA_LED_Y))
 #define LEDY_TOGGLE()   (palTogglePad(GPIOA, GPIOA_LED_Y))
 #define LEDB_ON()       (palClearPad(GPIOA, GPIOA_LED_B))
 #define LEDB_OFF()      (palSetPad(GPIOA, GPIOA_LED_B))
@@ -49,13 +49,6 @@
 #define LS1_DOWN()      (!palReadPad(GPIOI,GPIOI_LS1))
 #define LS2_DOWN()      (!palReadPad(GPIOI,GPIOI_LS2))
 #define LS3_DOWN()      (!palReadPad(GPIOI,GPIOI_LS3))
-
-//#define LEDB_ON()       (palClearPad(GPIOA, GPIOA_TIM2_CH3))
-//#define LEDB_OFF()      (palSetPad(GPIOA, GPIOA_TIM2_CH3))
-//#define LEDB_TOGGLE()   (palTogglePad(GPIOA, GPIOA_TIM2_CH3))
-//#define LEDO_ON()       (palClearPad(GPIOA, GPIOA_TIM2_CH2))
-//#define LEDO_OFF()      (palSetPad(GPIOA, GPIOA_TIM2_CH2))
-//#define LEDO_TOGGLE()   (palTogglePad(GPIOA, GPIOA_TIM2_CH2))
 
 //Sets of command for Pneumatics Output
 #define PN1_ON()        (palSetPad(GPIOD, GPIOD_PNEUMATICS1))
@@ -137,7 +130,7 @@
  * @brief   Enables the ICU subsystem.
  */
 #if !defined(HAL_USE_ICU) || defined(__DOXYGEN__)
-#define HAL_USE_ICU                 FALSE
+#define HAL_USE_ICU                 TRUE
 #endif
 
 /**

@@ -19,6 +19,7 @@
 #include "adis16265.h"
 #include "attitude.h"
 #include "calibrate_sensor.h"
+#include "rangefinder.h"
 
 #include "gimbal.h"
 #include "chassis.h"

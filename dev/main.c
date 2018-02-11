@@ -71,7 +71,8 @@ typedef enum {
   STATE_ONFOOT,
   STATE_ROLLER_IN,
   STATE_ROLLER_IN_2,
-  STATE_RUSHDOWN_1
+  STATE_RUSHDOWN_1,
+  STATE_RUSHDOWN_2
 } island_state_t;
 
 #define ASCEND_MODE 1
@@ -135,22 +136,20 @@ static void liftWheel_calibration(motorPosStruct* const lift_motor, float* const
   }
 }
 
-#define ISLAND_UPDATE_PERIOD_MS 10
+#define ISLAND_UPDATE_PERIOD_MS 5
 static THD_WORKING_AREA(Island_thread_wa, 1024);
 static THD_FUNCTION(Island_thread, p)
 {
   chRegSetThreadName("Island climbing");
 
   (void)p;
-
-  uint32_t tick = chVTGetSystemTimeX();
-  param_t pos_sp[6];
+  param_t pos_sp[7];
 
   island_state_t state = STATE_GROUND;
 
   const char name[] = "pos_sp";
-  const char subName[] = "1 2 3 4";
-  params_set(pos_sp,18,4,name,subName,PARAM_PUBLIC);
+  const char subName[] = "1 2 3 4 5 6 7";
+  params_set(pos_sp,18,7,name,subName,PARAM_PUBLIC);
   DOG_RELAX();
 
   motorPosStruct* lift_motor = lift_get();
@@ -158,8 +157,14 @@ static THD_FUNCTION(Island_thread, p)
   RC_Ctl_t* rc = RC_get();
 
   float offset[4];
-  liftWheel_calibration(lift_motor, offset);
+  float pos_cmd = 0.0f;
 
+  chThdSleepSeconds(2);
+  if(!lift_getError())
+    liftWheel_calibration(lift_motor, offset);
+  uint8_t on_ground = 0;
+
+  uint32_t tick = chVTGetSystemTimeX();
   while(true)
   {
     tick += MS2ST(ISLAND_UPDATE_PERIOD_MS);
@@ -169,7 +174,7 @@ static THD_FUNCTION(Island_thread, p)
     {
       tick = chVTGetSystemTimeX();
     }
-
+    /* State controller for island climbing machine*/
     if(rc->rc.s2 == ASCEND_MODE || rc->rc.s2 == DECEND_MODE)
     {
       switch(rc->rc.s1)
@@ -182,6 +187,7 @@ static THD_FUNCTION(Island_thread, p)
             else
               state++;
             transition = false;
+            pos_cmd = 0.0f;
           }
           break;
         case 3:
@@ -195,6 +201,7 @@ static THD_FUNCTION(Island_thread, p)
             else if(state != STATE_GROUND)
               state--;
             transition = false;
+            pos_cmd = 0.0f;
           }
           break;
       }
@@ -210,6 +217,7 @@ static THD_FUNCTION(Island_thread, p)
             if(state == STATE_RUSHDOWN_1)
               state = STATE_GROUND;
             transition = false;
+            pos_cmd = 0.0f;
           }
           break;
         case 3:
@@ -220,29 +228,40 @@ static THD_FUNCTION(Island_thread, p)
           {
             if(state == STATE_GROUND)
               state = STATE_RUSHDOWN_1;
-            else if(state == STATE_RUSHDOWN_1)
-              state =  STATE_GROUND;
             transition = false;
+            pos_cmd = 0.0f;
           }
           break;
       }
     }
+    /**/
+
+
+    int16_t input = rc->rc.channel3 - RC_CH_VALUE_OFFSET;
+    if(input > 400)
+      pos_cmd += 0.1f;
+    else if(input > 100)
+      pos_cmd += 0.025f;
+    else if(input < -400)
+      pos_cmd -= 0.1f;
+    else if(input < -100)
+      pos_cmd -= 0.025f;
 
     switch(state)
     {
 
       case STATE_ONFOOT:
-        lift_changePos(lift_motor    , offset[0] - pos_sp[0]);
-        lift_changePos(lift_motor + 1, offset[1] - pos_sp[0]);
-        lift_changePos(lift_motor + 2, offset[2] - pos_sp[0]);
-        lift_changePos(lift_motor + 3, offset[3] - pos_sp[0]);
+        lift_changePos(lift_motor    , offset[0] - pos_sp[0] + pos_cmd);
+        lift_changePos(lift_motor + 1, offset[1] - pos_sp[0] + pos_cmd);
+        lift_changePos(lift_motor + 2, offset[2] - pos_sp[0] + pos_cmd);
+        lift_changePos(lift_motor + 3, offset[3] - pos_sp[0] + pos_cmd);
         DOG_ERECT();
         break;
       case STATE_ROLLER_IN:
-        lift_changePos(lift_motor    , offset[0] - pos_sp[2]);
-        lift_changePos(lift_motor + 1, offset[1] - pos_sp[2]);
-        lift_changePos(lift_motor + 2, offset[2] - pos_sp[1]);
-        lift_changePos(lift_motor + 3, offset[3] - pos_sp[1]);
+        lift_changePos(lift_motor    , offset[0] - pos_sp[2] + pos_cmd);
+        lift_changePos(lift_motor + 1, offset[1] - pos_sp[2] + pos_cmd);
+        lift_changePos(lift_motor + 2, offset[2] - pos_sp[1] + pos_cmd);
+        lift_changePos(lift_motor + 3, offset[3] - pos_sp[1] + pos_cmd);
         if(lift_motor[2].in_position == LIFT_IN_POSITION_COUNT
           && lift_motor[3].in_position == LIFT_IN_POSITION_COUNT
           && pIMU->euler_angle[Pitch] > -0.05f
@@ -251,10 +270,10 @@ static THD_FUNCTION(Island_thread, p)
         DOG_ERECT();
         break;
       case STATE_ROLLER_IN_2:
-        lift_changePos(lift_motor    , offset[0] - pos_sp[2] );
-        lift_changePos(lift_motor + 1, offset[1] - pos_sp[2] );
-        lift_changePos(lift_motor + 2, offset[2] - pos_sp[1] - 4.15f);
-        lift_changePos(lift_motor + 3, offset[3] - pos_sp[1] - 4.15f);
+        lift_changePos(lift_motor    , offset[0] - pos_sp[2]  + pos_cmd);
+        lift_changePos(lift_motor + 1, offset[1] - pos_sp[2]  + pos_cmd);
+        lift_changePos(lift_motor + 2, offset[2] - pos_sp[1] - 4.15f + pos_cmd);
+        lift_changePos(lift_motor + 3, offset[3] - pos_sp[1] - 4.15f + pos_cmd);
         if(lift_motor[2].in_position == LIFT_IN_POSITION_COUNT
           && lift_motor[3].in_position == LIFT_IN_POSITION_COUNT
           && pIMU->euler_angle[Pitch] < -0.05f
@@ -263,35 +282,42 @@ static THD_FUNCTION(Island_thread, p)
         DOG_ERECT();
         break;
       case STATE_GROUND:
-        lift_changePos(lift_motor    , offset[0] - 47.0f);
-        lift_changePos(lift_motor + 1, offset[1] - 47.0f);
-        lift_changePos(lift_motor + 2, offset[2] - 47.0f);
-        lift_changePos(lift_motor + 3, offset[3] - 47.0f);
+        lift_changePos(lift_motor    , offset[0] - 47.0f + pos_cmd);
+        lift_changePos(lift_motor + 1, offset[1] - 47.0f + pos_cmd);
+        lift_changePos(lift_motor + 2, offset[2] - 47.0f + pos_cmd);
+        lift_changePos(lift_motor + 3, offset[3] - 47.0f + pos_cmd);
         if(rc->rc.s2 == DECEND_MODE || rc->rc.s2 == ASCEND_MODE)
           DOG_ERECT();
         else
           DOG_RELAX();
         break;
-/*      case STATE_RUSHDOWN_1:
-        lift_changePos(lift_motor    , offset[0] - pos_sp[2]);
-        lift_changePos(lift_motor + 1, offset[1] - pos_sp[2]);
-        lift_changePos(lift_motor + 2, offset[2] - pos_sp[4]);
-        lift_changePos(lift_motor + 3, offset[3] - pos_sp[4]);
+      case STATE_RUSHDOWN_1:
+        lift_changePos(lift_motor    , offset[0] - pos_sp[2] + pos_cmd);
+        lift_changePos(lift_motor + 1, offset[1] - pos_sp[2] + pos_cmd);
+        lift_changePos(lift_motor + 2, offset[2] - pos_sp[4] + pos_cmd);
+        lift_changePos(lift_motor + 3, offset[3] - pos_sp[4] + pos_cmd);
         if(lift_motor[2].in_position == LIFT_IN_POSITION_COUNT
           && lift_motor[3].in_position == LIFT_IN_POSITION_COUNT
-          && pIMU->euler_angle[Pitch] > -0.05f)
+          && pIMU->euler_angle[Pitch] > pos_sp[5])
           state++;
-        break;*/
-      case STATE_RUSHDOWN_1:
-        lift_changePos(lift_motor    , offset[0] - pos_sp[2]);
-        lift_changePos(lift_motor + 1, offset[1] - pos_sp[2]);
-        lift_changePos(lift_motor + 2, offset[2] - pos_sp[3]);
-        lift_changePos(lift_motor + 3, offset[3] - pos_sp[3]);
+        on_ground = 0;
+
+        break;
+      case STATE_RUSHDOWN_2:
+        lift_changePos(lift_motor    , offset[0] - pos_sp[2] + pos_cmd);
+        lift_changePos(lift_motor + 1, offset[1] - pos_sp[2] + pos_cmd);
+        lift_changePos(lift_motor + 2, offset[2] - pos_sp[3] + pos_cmd);
+        lift_changePos(lift_motor + 3, offset[3] - pos_sp[3] + pos_cmd);
+        if(pIMU->euler_angle[Pitch] > 0.1f)
+          on_ground++;
+
+        if(on_ground > 3 && pIMU->euler_angle[Pitch] < 0.05f)
+          state = STATE_GROUND;
+
         break;
     }
   }
 }
-
 
 /*
  * Application entry point.
@@ -308,30 +334,20 @@ int main(void) {
   halInit();
   chSysInit();
 
-
-  palSetPad(GPIOE, GPIOE_LED_R);
-  palSetPad(GPIOF, GPIOF_LED_G);
-  palClearPad(GPIOA, GPIOA_LED_Y);
-  palClearPad(GPIOA, GPIOA_LED_B);
-
-
   shellStart();
   params_init();
   can_processInit();
   RC_init();
-//  gimbal_init();
 
-//  gimbal_sys_iden_init(); //*
-  pwm_shooter_init(); // *
+  //gimbal_init();
+
   extiinit(); //*
   tempControllerInit(); //*
   chassis_init();
   pGyro = gyro_init();
+  rangeFinder_init();
 
-  //pwm12init();
   sdlog_init();
-
-  //tft_init(TFT_HORIZONTAL, CYAN, YELLOW, BLACK);
   lift_init();
   pIMU = imu_get(); //*
 
@@ -342,8 +358,6 @@ int main(void) {
   chThdCreateStatic(Island_thread_wa, sizeof(Island_thread_wa),
   NORMALPRIO + 5,
                     Island_thread, NULL); //*
-
-
 
   while (true)
   {

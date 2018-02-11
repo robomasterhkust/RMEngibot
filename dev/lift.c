@@ -8,6 +8,9 @@
 
 #define LIFT_UPDATE_PERIOD_US  1000000/LIFT_CONTROL_FREQ
 
+static lift_error_t lift_error = 0;
+static thread_t* lift_thread = NULL;
+
 static ChassisEncoder_canStruct* encoders;
 static volatile motorPosStruct motors[EXTRA_MOTOR_NUM];
 static lpfilterStruct lp_speed[EXTRA_MOTOR_NUM];
@@ -23,8 +26,24 @@ motorPosStruct* lift_get(void)
   return motors;
 }
 
+lift_error_t lift_getError(void)
+{
+  return lift_error;
+}
+
 #define   LIFT_ANGLE_PSC 7.6699e-4 //2*M_PI/0x1FFF
 #define   LIFT_SPEED_PSC 1.0f/((float)LIFT_GEAR_RATIO)
+
+static void lift_kill(void)
+{
+  LEDY_ON();
+  if(lift_thread != NULL)
+  {
+    chThdTerminate(lift_thread);
+    can_motorSetCurrent(LIFT_CAN, CHASSIS_CAN_EID, 0, 0, 0, 0);
+    lift_thread = NULL;
+  }
+}
 
 static void lift_encoderUpdate(void)
 {
@@ -39,9 +58,11 @@ static void lift_encoderUpdate(void)
       float pos_input = encoders[i].raw_angle*LIFT_ANGLE_PSC;
       float speed_input = encoders[i].raw_speed*LIFT_SPEED_PSC;
 
-      if(motors[i]._prev < 1.9f && pos_input > 4.38f)
+      if((motors[i]._prev < 0.6f && pos_input > 5.68f) ||
+        (speed_input < -100.0f && pos_input > motors[i]._prev))
         motors[i].rev--;
-      if(motors[i]._prev > 4.38f && pos_input < 1.9f)
+      if((motors[i]._prev > 5.68f && pos_input < 0.6f) ||
+        (speed_input > 100.0f && pos_input < motors[i]._prev))
         motors[i].rev++;
 
       motors[i]._prev = pos_input;
@@ -57,6 +78,8 @@ static void lift_encoderUpdate(void)
       if(motors[i]._wait_count > LIFT_CONNECTION_ERROR_COUNT)
       {
         motors[i]._wait_count = 1;
+        lift_error |= LIFT0_NOT_CONNECTED << i;
+        lift_kill();
       }
     }
 
@@ -175,7 +198,7 @@ void lift_init(void)
   params_set(&controllers[3], 16,3,FLLName,subname_PID,PARAM_PUBLIC);
   params_set(&weight, 17,1,weightName,weightSubName,PARAM_PUBLIC);
 
-  chThdCreateStatic(lift_control_wa, sizeof(lift_control_wa),
+  lift_thread = chThdCreateStatic(lift_control_wa, sizeof(lift_control_wa),
                           NORMALPRIO, lift_control, NULL);
 
 }

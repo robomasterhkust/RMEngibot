@@ -24,12 +24,6 @@ chassisStruct* chassis_get(void)
   return &chassis;
 }
 
-// MATH function
-static inline float map(float x, float in_min, float in_max, float out_min, float out_max)
-{
-  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
 #define   CHASSIS_ANGLE_PSC 7.6699e-4 //2*M_PI/0x1FFF
 #define   CHASSIS_SPEED_PSC 1.0f/((float)CHASSIS_GEAR_RATIO)
 #define   CHASSIS_CONNECTION_ERROR_COUNT 20U
@@ -157,9 +151,9 @@ void drive_kinematics(int RX_X2, int RX_Y1, int RX_X1)
   float heading_correction = chassis.heading_sp - chassis._pGyro->angle;
 
   //Remote Control Commands, Mapped to match min and max CURRENT
-  chassis.strafe_sp  = (int16_t)map(RX_X2, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX, -CURRENT_MAX, CURRENT_MAX);
-  chassis.drive_sp = (int16_t)map(RX_Y1, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX, -CURRENT_MAX, CURRENT_MAX);
-  chassis.heading_sp = (int16_t)map(RX_X1, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX, -CURRENT_MAX, CURRENT_MAX);
+  chassis.strafe_sp  = (int16_t)mapInput(RX_X2, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX, -CURRENT_MAX, CURRENT_MAX);
+  chassis.drive_sp = (int16_t)mapInput(RX_Y1, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX, -CURRENT_MAX, CURRENT_MAX);
+  chassis.heading_sp = (int16_t)mapInput(RX_X1, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX, -CURRENT_MAX, CURRENT_MAX);
   //heading_correction = HEADING_SCALE * (int16_t)map(heading_correction, HEADING_MIN, HEADING_MAX, CURRENT_MIN, CURRENT_MAX);
   heading_correction = 0.0f;
   // For later coordinate with chassis

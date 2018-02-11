@@ -16,6 +16,23 @@ extern PWMDriver PWMD12;
 
 TPIDStruct tempPID1;
 
+// These are the definitions of the PWMConfig stuctures
+// E.g. the function name means PWM 3 CONFIGURATION
+static PWMConfig pwm3cfg = {
+        100000,   /* 1MHz PWM clock frequency.   */
+        100,      /* Initial PWM period 1ms.       */
+        NULL,       /* Periodic call back */
+        {
+                {PWM_OUTPUT_DISABLED, NULL}, /* {<pwm_initialisation_status>, <callback function of the channel> */
+                {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+                {PWM_OUTPUT_DISABLED, NULL},
+                {PWM_OUTPUT_DISABLED, NULL}
+        },
+        0,
+        0
+};
+
+
 static const TPIDConfigStruct tpid1_conf = {
                                             3500.0f,   //Kp
                                             0.075f,      //Ki
@@ -89,7 +106,7 @@ static THD_FUNCTION(Temperature_thread, p)
 }
 
 void tempControllerInit(void){
-  pwm3init();
+  pwmStart(&PWMD3, &pwm3cfg);
   chThdCreateStatic(Temperature_thread_wa, sizeof(Temperature_thread_wa),
     NORMALPRIO,
                       Temperature_thread, NULL);

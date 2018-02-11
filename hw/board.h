@@ -364,8 +364,8 @@
                                      PIN_PUPDR_FLOATING(GPIOA_PIN15))
 #define VAL_GPIOA_ODR               (PIN_ODR_HIGH(GPIOA_TIM2_CH1) |           \
                                      PIN_ODR_HIGH(GPIOA_TIM2_CH2) |             \
-                                     PIN_ODR_HIGH(GPIOA_LED_Y) |             \
-                                     PIN_ODR_HIGH(GPIOA_LED_B) |             \
+                                     PIN_ODR_LOW(GPIOA_LED_Y) |             \
+                                     PIN_ODR_LOW(GPIOA_LED_B) |             \
                                      PIN_ODR_HIGH(GPIOA_PIN4) |             \
                                      PIN_ODR_HIGH(GPIOA_PIN5) |              \
                                      PIN_ODR_HIGH(GPIOA_PIN6) |              \
@@ -381,6 +381,8 @@
 
 #define VAL_GPIOA_AFRL              (PIN_AFIO_AF(GPIOA_TIM2_CH1, 1U) |        \
                                      PIN_AFIO_AF(GPIOA_TIM2_CH2, 1U) |          \
+                                     PIN_AFIO_AF(GPIOA_PIN4, 0U) |          \
+                                     PIN_AFIO_AF(GPIOA_PIN5, 0U) |           \
                                      PIN_AFIO_AF(GPIOA_PIN4, 0U) |          \
                                      PIN_AFIO_AF(GPIOA_PIN5, 0U) |           \
                                      PIN_AFIO_AF(GPIOA_PIN6, 0U) |           \
@@ -415,7 +417,7 @@
  * PB15 - PIN15                     (input pullup).
  */
 #define VAL_GPIOB_MODER             (PIN_MODE_OUTPUT(GPIOB_ADC1_IN8) |           \
-                                     PIN_MODE_ANALOG(GPIOB_ADC1_IN9) |           \
+                                     PIN_MODE_OUTPUT(GPIOB_ADC1_IN9) |           \
                                      PIN_MODE_INPUT(GPIOB_PIN2) |           \
                                      PIN_MODE_INPUT(GPIOB_PIN3) |        \
                                      PIN_MODE_ALTERNATE(GPIOB_TIM3_BUZZER) |           \

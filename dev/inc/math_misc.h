@@ -13,7 +13,7 @@
  *
  * Data structure for a IIR second-order sections form filter
  * b_0 + b_1 * z^-1 + b_2 * z^-2
- * -----------------------------
+ * -------------------------------
  *   1 + a_1 * z^-1 + a_2 * z^-2
  */
 typedef struct {
@@ -45,6 +45,12 @@ static inline float boundOutput(const float input, const float max)
     output = -max;
 
   return output;
+}
+
+// MATH function
+static inline float mapInput(float x, float in_min, float in_max, float out_min, float out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
 static inline float vector_norm(const float v[], const uint8_t length)
@@ -80,7 +86,10 @@ static inline float vector3_projection(const float u[3], const float v[3])
 static inline float norm_vector3_projection(const float u[3], const float v[3])
 {
   float norm = vector_norm(v,3);
-  return (u[0]*v[0]+u[1]*v[1]+u[2]*v[2])/(norm*norm);
+  if(norm != 0.0f)
+    return (u[0]*v[0]+u[1]*v[1]+u[2]*v[2])/(norm*norm);
+  else
+    return 0.0f;
 }
 
 
