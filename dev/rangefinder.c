@@ -91,36 +91,41 @@ void rangeFinder_control(const uint8_t index, const bool enable)
   uint16_t CCER = GPTD5.tim->CCER;
   uint16_t DIER = GPTD5.tim->DIER;
 
+  uint16_t PWM_CCR;
+
+  captureDistance[index] = 0;
+  distance_cm[index] = 0.0f;
+
   switch (index)
   {
     case RANGEFINDER_INDEX_NOSE:
       DIER ^= STM32_TIM_DIER_CC1IE;
       CCER ^= STM32_TIM_CCER_CC1E;
+      PWM_CCR = 1;
       break;
     case RANGEFINDER_INDEX_LEFT_DOGBALL:
       DIER ^= STM32_TIM_DIER_CC2IE;
       CCER ^= STM32_TIM_CCER_CC2E;
+      PWM_CCR = 9993;
       break;
     case RANGEFINDER_INDEX_RIGHT_DOGBALL:
       DIER ^= STM32_TIM_DIER_CC3IE;
       CCER ^= STM32_TIM_CCER_CC3E;
+      PWM_CCR = 1;
       break;
   }
 
   GPTD5.tim->DIER = DIER;
   GPTD5.tim->CCER = CCER;
 
-  captureDistance[index] = 0;
-  distance_cm[index] = 0.0f;
-
-  PWMD8.tim->CCR[index] = (enable * (index % 2 ? 9998 : 1));
+  PWMD8.tim->CCR[index] = PWM_CCR;
   state[index] = enable;
 }
 
 float rangeFinder_getDistance(const uint8_t index)
 {
-  if(index > RANGEFINDER_NUM)
-    return 0.0f;
+  if(index > RANGEFINDER_NUM || distance_cm[index] == 0.0f)
+    return 999.9f;
   return distance_cm[index];
 }
 
@@ -138,7 +143,7 @@ void rangeFinder_init(void)
                   STM32_TIM_CCMR1_IC1F(3) | STM32_TIM_CCMR1_IC2F(3);
   GPTD5.tim->CCMR2 |= STM32_TIM_CCMR2_CC3S(1) |
                    STM32_TIM_CCMR2_IC3F(3);
-  GPTD5.tim->CNT = 5000000U;                 
+  GPTD5.tim->CNT = 10000000U;
   GPTD5.tim->CR1 |= STM32_TIM_CR1_ARPE | STM32_TIM_CR1_CEN;
 
   pwmStart(&PWMD8, &pwm8cfg);

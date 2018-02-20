@@ -731,7 +731,7 @@
                                      PIN_ODR_HIGH(GPIOD_TIM4_CH1) |              \
                                      PIN_ODR_HIGH(GPIOD_TIM4_CH2) |              \
                                      PIN_ODR_HIGH(GPIOD_PNEUMATICS1) |              \
-                                     PIN_ODR_HIGH(GPIOD_PNEUMATICS2))
+                                     PIN_ODR_LOW(GPIOD_PNEUMATICS2))
 #define VAL_GPIOD_AFRL              (PIN_AFIO_AF(GPIOD_CAN1_RX, 9U) |          \
                                      PIN_AFIO_AF(GPIOD_CAN1_TX, 9U) |          \
                                      PIN_AFIO_AF(GPIOD_SD_CMD, 12U) |          \

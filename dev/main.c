@@ -71,13 +71,27 @@ typedef enum {
   STATE_ONFOOT,
   STATE_ROLLER_IN,
   STATE_ROLLER_IN_2,
+  STATE_ROLLER_IN_LEFT,
+  STATE_ROLLER_IN_RIGHT,
+  STATE_CRAW,
   STATE_RUSHDOWN_1,
   STATE_RUSHDOWN_2
+} robot_state_t;
+
+typedef enum {
+  STATE_STAIR_0,
+  STATE_STAIR_1,
+  STATE_STAIR_2,
 } island_state_t;
 
-#define ASCEND_MODE 1
-#define DECEND_MODE 3
-#define RUSH_MODE 2
+#define ASCEND_MODE   1
+#define LOCK_MODE     3
+#define DECEND_MODE   2
+
+#define S1_ASCEND   1
+#define S1_RESET    3
+#define S1_DECEND   2
+
 #define DOG_ERECT() (PN2_ON())
 #define DOG_RELAX() (PN2_OFF())
 
@@ -91,7 +105,8 @@ static THD_FUNCTION(Island_thread, p)
   param_t pos_sp[7];
   param_t threshold[7];
 
-  island_state_t state = STATE_GROUND;
+  island_state_t island_state = STATE_STAIR_0;
+  robot_state_t robot_state = STATE_GROUND;
 
   const char namePos[] = "pos_sp";
   const char subNamePos[] = "1 2 3 4 5 6 7";
@@ -100,20 +115,19 @@ static THD_FUNCTION(Island_thread, p)
   const char subNameTH[] = "Up_Pitch Dn_Pitch1 Dn_Pitch2 Dn_Pitch3 Up_RF1 Up_RF2 7";
   params_set(pos_sp,18,7,namePos,subNamePos,PARAM_PUBLIC);
   params_set(threshold,19,7,nameTH,subNameTH,PARAM_PUBLIC);
-  DOG_RELAX();
 
-  bool transition = false;
   RC_Ctl_t* rc = RC_get();
 
+  bool s1_reset = false;
   float pos_cmd = 0.0f;
 
-  uint16_t count = 0;
-  uint16_t on_ground = 0;
+  uint16_t count = 0, count_left = 0, count_right = 0, count_onGround = 0;
 
   chThdSleepSeconds(2);
   if(!lift_getError())
     lift_calibrate();
 
+  uint8_t S1,S2;
   uint32_t tick = chVTGetSystemTimeX();
   while(true)
   {
@@ -124,68 +138,13 @@ static THD_FUNCTION(Island_thread, p)
     {
       tick = chVTGetSystemTimeX();
     }
-    /* State controller for island climbing machine*/
-    if(rc->rc.s2 == ASCEND_MODE || rc->rc.s2 == DECEND_MODE)
-    {
-      switch(rc->rc.s1)
-      {
-        case 1:
-          if(transition)
-          {
-            if(state == STATE_ROLLER_IN_2)
-              state = STATE_GROUND;
-            else
-              state++;
-            transition = false;
-            pos_cmd = 0.0f;
-          }
-          break;
-        case 3:
-          transition = true;
-          break;
-        case 2:
-          if(transition)
-          {
-            if(state == STATE_GROUND && rc->rc.s2 == DECEND_MODE)
-              state = STATE_ROLLER_IN_2;
-            else if(state != STATE_GROUND)
-              state--;
-            transition = false;
-            pos_cmd = 0.0f;
-          }
-          break;
-      }
-    }
-    else if(rc->rc.s2 == RUSH_MODE)
-    {
-      DOG_RELAX();
-      switch(rc->rc.s1)
-      {
-        case 1:
-          if(transition)
-          {
-            if(state == STATE_RUSHDOWN_1)
-              state = STATE_GROUND;
-            transition = false;
-            pos_cmd = 0.0f;
-          }
-          break;
-        case 3:
-          transition = true;
-          break;
-        case 2:
-          if(transition)
-          {
-            if(state == STATE_GROUND)
-              state = STATE_RUSHDOWN_1;
-            transition = false;
-            pos_cmd = 0.0f;
-          }
-          break;
-      }
-    }
-    /**/
 
+    S1 = rc->rc.s1;
+    S2 = rc->rc.s2;
+
+    /* robot_state controller for island climbing machine*/
+    if(S1 == S1_RESET)
+      s1_reset = true;
 
     int16_t input = rc->rc.channel3 - RC_CH_VALUE_OFFSET;
     if(input > 400)
@@ -197,94 +156,211 @@ static THD_FUNCTION(Island_thread, p)
     else if(input < -100)
       pos_cmd -= 0.025f;
 
-    switch(state)
+    uint8_t prev_state = robot_state;
+    switch(robot_state)
     {
+      case STATE_GROUND:
+        DOG_RELAX();
 
+        lift_changePos(47.0f - pos_cmd, 47.0f - pos_cmd ,
+                      47.0f - pos_cmd, 47.0f - pos_cmd);
+
+        if(S2 == ASCEND_MODE && (s1_reset && S1 == S1_ASCEND))
+          robot_state = STATE_ONFOOT;
+        else if(S2 == DECEND_MODE && (s1_reset && S1 == S1_DECEND))
+          robot_state = STATE_RUSHDOWN_1;
+
+        break;
       case STATE_ONFOOT:
         DOG_ERECT();
         rangeFinder_control(RANGEFINDER_INDEX_NOSE, ENABLE);
 
+        //Pos0: on_foot position setpoint
         lift_changePos(pos_sp[0] - pos_cmd, pos_sp[0] - pos_cmd ,
                       pos_sp[0] - pos_cmd, pos_sp[0] - pos_cmd);
 
-        if(rc->rc.s2 == ASCEND_MODE && lift_inPosition() &&
-          threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_NOSE) < threshold[4], 24, &count))
+        if(S2 == ASCEND_MODE &&
+            (
+              (s1_reset && S1 == S1_ASCEND) ||
+              (
+                lift_inPosition() &&
+                threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_NOSE) < threshold[4], 24, &count)
+              )
+            )
+          )
         {
           count = 0;
-          state++;
+          robot_state = STATE_ROLLER_IN;
+        }
+        else if(s1_reset && S1 == S1_DECEND)
+        {
+          count = 0;
+          robot_state = STATE_GROUND;
         }
 
         break;
       case STATE_ROLLER_IN:
-        DOG_ERECT();
         rangeFinder_control(RANGEFINDER_INDEX_NOSE, DISABLE);
 
         lift_changePos(pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd ,
                       pos_sp[1] - pos_cmd, pos_sp[1] - pos_cmd);
 
-        if(rc->rc.s2 == ASCEND_MODE &&
-          lift_inPosition() && threshold_count(pIMU->euler_angle[Pitch] > threshold[0], 2, &count))
+        count_left = count_right = 0;
+        if(S2 == ASCEND_MODE &&
+            (
+              (s1_reset && S1 == S1_ASCEND) ||
+              (lift_inPosition() && threshold_count(pIMU->euler_angle[Pitch] > threshold[0], 2, &count))
+            )
+          )
         {
           count = 0;
-          state++;
+          robot_state = STATE_ROLLER_IN_2;
+        }
+        else if(s1_reset && S1 == S1_DECEND)
+        {
+          count = 0;
+          robot_state = STATE_ONFOOT;
         }
 
         break;
       case STATE_ROLLER_IN_2:
-        DOG_ERECT();
         rangeFinder_control(RANGEFINDER_INDEX_LEFT_DOGBALL,  ENABLE);
         rangeFinder_control(RANGEFINDER_INDEX_RIGHT_DOGBALL, ENABLE);
 
         lift_changePos(pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd ,
-                      pos_sp[1] + 4.15f - pos_cmd, pos_sp[1] + 4.15f - pos_cmd);
+                      pos_sp[1] + 4.4f - pos_cmd, pos_sp[1] + 4.4f - pos_cmd);
 
-        if(rc->rc.s2 == DECEND_MODE &&
-          lift_inPosition() && threshold_count(pIMU->euler_angle[Pitch] < threshold[0], 2, &count))
+        if(S2 == ASCEND_MODE &&(s1_reset && S1 == S1_ASCEND))
         {
-          count = 0;
-          state--;
+          robot_state = STATE_CRAW;
+          island_state++;
         }
+        else if(S2 == ASCEND_MODE &&
+              (lift_inPosition() &&
+              threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL) < threshold[5], 24, &count_left)))
+          robot_state = STATE_ROLLER_IN_LEFT;
+        else if(S2 == ASCEND_MODE &&
+              (lift_inPosition() &&
+              threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_DOGBALL) < threshold[5], 24, &count_right)))
+          robot_state = STATE_ROLLER_IN_RIGHT;
+        else if(s1_reset && S1 == S1_DECEND)
+          robot_state = STATE_ONFOOT;
+
         break;
-      case STATE_GROUND:
+      case STATE_ROLLER_IN_LEFT:
+        rangeFinder_control(RANGEFINDER_INDEX_LEFT_DOGBALL,  DISABLE);
+
+        lift_changePos(pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd ,
+                      pos_sp[1] + 4.4f - pos_cmd, pos_sp[2] - pos_cmd);
+
+        if(S2 == ASCEND_MODE &&
+            (
+              (s1_reset && S1 == S1_ASCEND) ||
+              (threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_DOGBALL) < threshold[5], 24, &count_right))
+            )
+          )
+        {
+          robot_state = STATE_CRAW;
+          island_state++;
+        }
+        else if(s1_reset && S1 == S1_DECEND)
+          robot_state = STATE_ROLLER_IN_2;
+
+        break;
+      case STATE_ROLLER_IN_RIGHT:
+        rangeFinder_control(RANGEFINDER_INDEX_RIGHT_DOGBALL, DISABLE);
+
+        lift_changePos(pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd ,
+                      pos_sp[2] - pos_cmd, pos_sp[1] + 4.4f - pos_cmd);
+
+        if(S2 == ASCEND_MODE &&
+            (
+              (s1_reset && S1 == S1_ASCEND) ||
+              (threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL) < threshold[5], 24, &count_left))
+            )
+          )
+        {
+          robot_state = STATE_CRAW;
+          island_state++;
+        }
+        else if(s1_reset && S1 == S1_DECEND)
+          robot_state = STATE_ROLLER_IN_2;
+
+        break;
+      case STATE_CRAW:
         rangeFinder_control(RANGEFINDER_INDEX_LEFT_DOGBALL,  DISABLE);
         rangeFinder_control(RANGEFINDER_INDEX_RIGHT_DOGBALL, DISABLE);
 
-        lift_changePos(47.0f - pos_cmd, 47.0f - pos_cmd ,
-                      47.0f - pos_cmd, 47.0f - pos_cmd);
+        lift_changePos(pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd ,
+                      pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd);
 
-        if(rc->rc.s2 == DECEND_MODE || rc->rc.s2 == ASCEND_MODE)
-          DOG_ERECT();
-        else
-          DOG_RELAX();
+        if(S2 == ASCEND_MODE && (s1_reset && S1 == S1_ASCEND))
+        {
+          if(island_state == STATE_STAIR_1)
+            robot_state = STATE_ONFOOT;
+          else if(island_state == STATE_STAIR_2)
+            robot_state = STATE_GROUND;
+        }
+        else if(S2 == DECEND_MODE && (s1_reset && S1 == S1_DECEND))
+          robot_state = STATE_RUSHDOWN_1;
+        else if(s1_reset && S1 == S1_DECEND)
+        {
+          robot_state = STATE_ROLLER_IN_2;
+          island_state--;
+        }
+
         break;
       case STATE_RUSHDOWN_1:
+        DOG_RELAX();
         lift_changePos(pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd ,
                     pos_sp[4] - pos_cmd, pos_sp[4] - pos_cmd);
 
-        if(lift_inPosition() && threshold_count(pIMU->euler_angle[Pitch] > threshold[1], 2, &count))
+        if(lift_inPosition()
+        && threshold_count(pIMU->euler_angle[Pitch] > threshold[1], 2, &count))
         {
           count = 0;
-          state++;
+          count_onGround = 0;
+          robot_state = STATE_RUSHDOWN_2;
         }
-        on_ground = 0;
+        else if(S2 == DECEND_MODE && (s1_reset && S1 == S1_ASCEND))
+        {
+          count = 0;
+          robot_state = STATE_GROUND;
+        }
 
         break;
       case STATE_RUSHDOWN_2:
-      lift_changePos(pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd ,
+        lift_changePos(pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd ,
                   pos_sp[3] - pos_cmd, pos_sp[3] - pos_cmd);
 
-        //if(pIMU->euler_angle[Pitch] > 0.1f)
         if(pIMU->euler_angle[Pitch] > threshold[2])
-          on_ground++;
+          count_onGround++;
 
-        if(on_ground >= 2 && threshold_count(pIMU->euler_angle[Pitch] < threshold[3], 2, &count))
+        if(count_onGround >= 2 && threshold_count(pIMU->euler_angle[Pitch] < threshold[3], 2, &count))
         {
           count = 0;
-          state = STATE_GROUND;
+          if(island_state != STATE_STAIR_0)
+            island_state--;
+
+          if(island_state == STATE_STAIR_1)
+            robot_state = STATE_RUSHDOWN_1;
+          else if(island_state == STATE_STAIR_0)
+            robot_state = STATE_GROUND;
+        }
+        else if(S2 == DECEND_MODE && (s1_reset && S1 == S1_DECEND))
+        {
+          count = 0;
+          if(island_state != STATE_STAIR_0)
+            island_state--;
+
+          robot_state = STATE_GROUND;
         }
 
         break;
     }
+
+    if(robot_state != prev_state)
+      s1_reset = false;
   }
 }
 
