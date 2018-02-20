@@ -41,8 +41,8 @@
 #define LEDY_ON()       (palSetPad(GPIOA, GPIOA_LED_Y))
 #define LEDY_OFF()      (palClearPad(GPIOA, GPIOA_LED_Y))
 #define LEDY_TOGGLE()   (palTogglePad(GPIOA, GPIOA_LED_Y))
-#define LEDB_ON()       (palClearPad(GPIOA, GPIOA_LED_B))
-#define LEDB_OFF()      (palSetPad(GPIOA, GPIOA_LED_B))
+#define LEDB_ON()       (palSetPad(GPIOA, GPIOA_LED_B))
+#define LEDB_OFF()      (palClearPad(GPIOA, GPIOA_LED_B))
 #define LEDB_TOGGLE()   (palTogglePad(GPIOA, GPIOA_LED_B))
 
 #define LS0_DOWN()      (!palReadPad(GPIOC,GPIOC_PIN0))

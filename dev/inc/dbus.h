@@ -9,6 +9,14 @@
 
 #define UART_DBUS                     &UARTD1
 
+#define RC_SAFE_LOCK
+
+#ifdef RC_SAFE_LOCK
+	#define RC_LOCK_TIME_S		 15
+
+	//Way to unlock: Same as arming a DJI phantom drone
+#endif
+
 #define KEY_V       0x4000
 #define KEY_C       0x2000
 #define KEY_X       0x1000
@@ -24,6 +32,13 @@
 #define KEY_A       0x0004
 #define KEY_S       0x0002
 #define KEY_W       0x0001
+
+typedef enum{
+	RC_LOCKED = 0,
+	RC_UNLOCKING,
+	RC_UNLOCKED
+} rc_lock_state_t;
+
 typedef struct{
 		struct{
 			uint16_t channel0;

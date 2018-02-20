@@ -97,14 +97,10 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   chprintf(chp,"Pitch: %f\r\n",PIMU->euler_angle[Pitch]); //BR
   chprintf(chp,"Yaw: %f\r\n",PIMU->euler_angle[Yaw]); //BL
 
-  chprintf(chp,"dist1: %f\r\n",rangeFinder_getDistance(RANGEFINDER_INDEX_NOSE));
-  chprintf(chp,"dist2: %f\r\n",rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL));
-  chprintf(chp,"dist3: %f\r\n",rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_DOGBALL));
-
-  chprintf(chp,"LS1: %d\r\n",LS0_DOWN());
-  chprintf(chp,"LS2: %d\r\n",LS1_DOWN());
-  chprintf(chp,"LS3: %d\r\n",LS2_DOWN());
-  chprintf(chp,"LS4: %d\r\n",LS3_DOWN());
+  chprintf(chp,"ch0: %d\r\n",rc->rc.channel0);
+  chprintf(chp,"ch1: %d\r\n",rc->rc.channel1);
+  chprintf(chp,"ch2: %d\r\n",rc->rc.channel2);
+  chprintf(chp,"ch3: %d\r\n",rc->rc.channel3);
 
   //chprintf(chp,"Gimbal Pitch: %f\r\n",gimbal->pitch_angle);
  // chprintf(chp,"Gimbal Yaw: %f\r\n",gimbal->yaw_angle);

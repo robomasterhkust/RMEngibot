@@ -16,11 +16,21 @@ static RC_Ctl_t RC_Ctl;
 static thread_reference_t uart_dbus_thread_handler = NULL;
 static uint8_t rx_start_flag = 1;
 
+#ifdef RC_SAFE_LOCK
+  systime_t update_time;
+  rc_lock_state_t lock_state;
+#endif
+
 /**
  * @brief   Decode the received DBUS sequence and store it in RC_Ctl struct
  */
 static void decryptDBUS(void)
 {
+  #ifdef RC_SAFE_LOCK
+    uint8_t prev_s1 = RC_Ctl.rc.s1,
+            prev_s2 = RC_Ctl.rc.s2;
+  #endif
+
   RC_Ctl.rc.channel0 = ((rxbuf[0]) | (rxbuf[1]<<8)) & 0x07FF;
   RC_Ctl.rc.channel1 = ((rxbuf[1]>>3) | (rxbuf[2]<<5)) & 0x07FF;
   RC_Ctl.rc.channel2 = ((rxbuf[2]>>6) | (rxbuf[3]<<2) | ((uint32_t)rxbuf[4]<<10)) & 0x07FF;
@@ -35,6 +45,34 @@ static void decryptDBUS(void)
   RC_Ctl.mouse.LEFT = rxbuf[12];                                       //!< Mouse Left Is Press ?
   RC_Ctl.mouse.RIGHT = rxbuf[13];                                       //!< Mouse Right Is Press ?
   RC_Ctl.keyboard.key_code = rxbuf[14] | (rxbuf[15] << 8);                   //!< KeyBoard value
+
+  #ifdef RC_SAFE_LOCK
+    if(lock_state == RC_UNLOCKED &&
+        (RC_Ctl.rc.channel0 != RC_CH_VALUE_OFFSET ||
+         RC_Ctl.rc.channel1 != RC_CH_VALUE_OFFSET ||
+         RC_Ctl.rc.channel2 != RC_CH_VALUE_OFFSET ||
+         RC_Ctl.rc.channel3 != RC_CH_VALUE_OFFSET ||
+         RC_Ctl.rc.s1 != prev_s1 ||
+         RC_Ctl.rc.s2 != prev_s2)
+      )
+      update_time = chVTGetSystemTimeX();
+    else if(lock_state == RC_LOCKED
+      && RC_Ctl.rc.channel0 > RC_CH_VALUE_MAX - 5
+      && RC_Ctl.rc.channel1 < RC_CH_VALUE_MIN + 5
+      && RC_Ctl.rc.channel2 < RC_CH_VALUE_MIN + 5
+      && RC_Ctl.rc.channel3 < RC_CH_VALUE_MIN + 5)
+      lock_state = RC_UNLOCKING;
+
+    else if(lock_state == RC_UNLOCKING
+      && RC_Ctl.rc.channel0 > RC_CH_VALUE_OFFSET - 5 && RC_Ctl.rc.channel0 < RC_CH_VALUE_OFFSET + 5
+      && RC_Ctl.rc.channel1 > RC_CH_VALUE_OFFSET - 5 && RC_Ctl.rc.channel1 < RC_CH_VALUE_OFFSET + 5
+      && RC_Ctl.rc.channel2 > RC_CH_VALUE_OFFSET - 5 && RC_Ctl.rc.channel2 < RC_CH_VALUE_OFFSET + 5
+      && RC_Ctl.rc.channel3 > RC_CH_VALUE_OFFSET - 5 && RC_Ctl.rc.channel3 < RC_CH_VALUE_OFFSET + 5)
+    {
+      update_time = chVTGetSystemTimeX();
+      lock_state = RC_UNLOCKED;
+    }
+  #endif
 }
 
 /*
@@ -62,6 +100,46 @@ static UARTConfig uart_cfg = {
   0,
   0
 };
+
+/**
+ * @brief   Return the RC_Ctl struct
+ */
+RC_Ctl_t* RC_get(void)
+{
+  return &RC_Ctl;
+}
+
+/**
+ * @brief Reset RC controller
+ * @NOTE  This function is also used as safe lock mechanism for RC controller
+ *        S2 is not flushed because it is used to unlock the RC controller
+ */
+static void RC_RCreset(void)
+{
+  RC_Ctl.rc.channel0 = 1024;
+  RC_Ctl.rc.channel1 = 1024;
+  RC_Ctl.rc.channel2 = 1024;
+  RC_Ctl.rc.channel3 = 1024;
+
+}
+
+static void RC_reset(void)
+{
+  RC_RCreset();
+
+  #ifdef RC_SAFE_LOCK
+    lock_state = RC_LOCKED;
+  #endif
+
+  RC_Ctl.rc.s1 =0;
+  RC_Ctl.rc.s2 = 0;
+  RC_Ctl.mouse.LEFT=0;
+  RC_Ctl.mouse.RIGHT =0;
+  RC_Ctl.mouse.x=0;
+  RC_Ctl.mouse.y=0;
+  RC_Ctl.mouse.z=0;
+  RC_Ctl.keyboard.key_code=0;
+}
 
 #define  DBUS_INIT_WAIT_TIME_MS      4U
 #define  DBUS_WAIT_TIME_MS         100U
@@ -97,44 +175,48 @@ static THD_FUNCTION(uart_dbus_thread, p)
         rxflag = true;
       }
       else
+      {
+        chSysLock();
         decryptDBUS();
+
+        #ifdef RC_SAFE_LOCK
+          if(lock_state != RC_UNLOCKED)
+            RC_RCreset();
+          else if(chVTGetSystemTimeX() > update_time + S2ST(RC_LOCK_TIME_S))
+            lock_state = RC_LOCKED;
+        #endif
+
+        chSysUnlock();
+      }
     }
     else
     {
       rxflag = false;
+      RC_reset();
       timeout = MS2ST(DBUS_INIT_WAIT_TIME_MS);
     }
 
     //Control the flashing of green LED // Shift to Error.c
-    if((!(count % 25) && !rxflag) || !(count% 75))
-      LEDB_TOGGLE();
+    if(!(count % 25))
+    {
+      uint32_t blink_count = count / 25;
+      if(!(blink_count % 8))
+        LEDB_OFF();
+      if(!rxflag ||
+          (
+           #ifdef RC_SAFE_LOCK
+             (lock_state != RC_UNLOCKED && (blink_count % 8 < 2)) ||
+             (lock_state == RC_UNLOCKED && (blink_count % 8 < 4))
+           #else
+             (blink_count % 8 < 4)
+           #endif
+          )
+        )
+        LEDB_TOGGLE();
+    }
+
     count++;
-
   }
-}
-
-/**
- * @brief   Return the RC_Ctl struct
- */
-RC_Ctl_t* RC_get(void)
-{
-  return &RC_Ctl;
-}
-
-static void rcStructInit(void)
-{
-  RC_Ctl.rc.channel0 = 1024;
-  RC_Ctl.rc.channel1 = 1024;
-  RC_Ctl.rc.channel2 = 1024;
-  RC_Ctl.rc.channel3 = 1024;
-  RC_Ctl.rc.s1 =0;
-  RC_Ctl.rc.s2 = 0;
-  RC_Ctl.mouse.LEFT=0;
-  RC_Ctl.mouse.RIGHT =0;
-  RC_Ctl.mouse.x=0;
-  RC_Ctl.mouse.y=0;
-  RC_Ctl.mouse.z=0;
-  RC_Ctl.keyboard.key_code=0;
 }
 
 /**
@@ -142,7 +224,7 @@ static void rcStructInit(void)
  */
 void RC_init(void)
 {
-  rcStructInit();
+  RC_reset();
 
   chThdCreateStatic(uart_dbus_thread_wa, sizeof(uart_dbus_thread_wa),
                     NORMALPRIO + 7,
