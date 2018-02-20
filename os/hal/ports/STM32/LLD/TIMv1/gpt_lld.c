@@ -878,13 +878,13 @@ void gpt_lld_polled_delay(GPTDriver *gptp, gptcnt_t interval) {
  * @notapi
  */
 void gpt_lld_serve_interrupt(GPTDriver *gptp) {
-
-  gptp->tim->SR = 0;
   if (gptp->state == GPT_ONESHOT) {
     gptp->state = GPT_READY;                /* Back in GPT_READY state.     */
     gpt_lld_stop_timer(gptp);               /* Timer automatically stopped. */
   }
   gptp->config->callback(gptp);
+
+  gptp->tim->SR = 0;
 }
 
 #endif /* HAL_USE_GPT */

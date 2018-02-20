@@ -9,69 +9,139 @@
 
 #include "rangefinder.h"
 
-static float lastdistance = 0.0f;
+static uint8_t  state          [RANGEFINDER_NUM];
+static float    distance_cm    [RANGEFINDER_NUM];
+static uint32_t captureDistance[RANGEFINDER_NUM];
 
-void icuwidthcb(ICUDriver *icup) {
-
-  icucnt_t width = icuGetWidthX(icup);
-  lastdistance = (SPEED_OF_SOUND * width * M_TO_CM) / (ICU_TIM_FREQ * 2);
-}
-
-static PWMConfig pwm4cfg = {
-        100000,   /* 1MHz PWM clock frequency.   */
+static PWMConfig pwm8cfg = {
+        200000,   /* 10kHz PWM clock frequency.   */
         10000,      /* Initial PWM period 1ms.       */
         NULL,
         {
                 {PWM_OUTPUT_ACTIVE_HIGH, NULL},
-                {PWM_OUTPUT_DISABLED, NULL},
-                {PWM_OUTPUT_DISABLED, NULL},
+                {PWM_OUTPUT_ACTIVE_LOW, NULL},
+                {PWM_OUTPUT_ACTIVE_HIGH, NULL},
                 {PWM_OUTPUT_DISABLED, NULL}
         },
         0,
         0
 };
 
+#define RANGEFINDER_PSC   SPEED_OF_SOUND * M_TO_CM / (float)(RANGEFINDER_TIM_FREQ * 2)
+void gpt5_cb(GPTDriver *gptp)
+{
+  uint16_t SR = gptp->tim->SR;
+  uint16_t CCER = gptp->tim->CCER;
 
-static ICUConfig icucfg2 = {
-  ICU_INPUT_ACTIVE_HIGH,
-  ICU_TIM_FREQ,                                    /* 1MHz ICU clock frequency.   */
-  icuwidthcb,
-  NULL,
-  NULL,
-  ICU_CHANNEL_1,
+  if(SR & STM32_TIM_SR_CC1IF)
+  {
+    if(CCER & STM32_TIM_CCER_CC1P)
+      distance_cm[RANGEFINDER_INDEX_NOSE] =
+        (float)(gptp->tim->CCR[RANGEFINDER_INDEX_NOSE] - captureDistance[RANGEFINDER_INDEX_NOSE])
+        * RANGEFINDER_PSC;
+    else
+      captureDistance[RANGEFINDER_INDEX_NOSE] =
+        gptp->tim->CCR[RANGEFINDER_INDEX_NOSE];
+
+    CCER ^= STM32_TIM_CCER_CC1P;
+  }
+  if(SR & STM32_TIM_SR_CC2IF)
+  {
+    if(CCER & STM32_TIM_CCER_CC2P)
+      distance_cm[RANGEFINDER_INDEX_LEFT_DOGBALL] =
+        (float)(gptp->tim->CCR[RANGEFINDER_INDEX_LEFT_DOGBALL] - captureDistance[RANGEFINDER_INDEX_LEFT_DOGBALL])
+        * RANGEFINDER_PSC;
+    else
+      captureDistance[RANGEFINDER_INDEX_LEFT_DOGBALL] =
+        gptp->tim->CCR[RANGEFINDER_INDEX_LEFT_DOGBALL];
+
+    CCER ^= STM32_TIM_CCER_CC2P;
+  }
+  if(SR & STM32_TIM_SR_CC3IF)
+  {
+    if(CCER & STM32_TIM_CCER_CC3P)
+      distance_cm[RANGEFINDER_INDEX_RIGHT_DOGBALL] =
+        (float)(gptp->tim->CCR[RANGEFINDER_INDEX_RIGHT_DOGBALL] - captureDistance[RANGEFINDER_INDEX_RIGHT_DOGBALL])
+        * RANGEFINDER_PSC;
+    else
+      captureDistance[RANGEFINDER_INDEX_RIGHT_DOGBALL] =
+        gptp->tim->CCR[RANGEFINDER_INDEX_RIGHT_DOGBALL];
+
+    CCER ^= STM32_TIM_CCER_CC3P;
+  }
+
+  gptp->tim->CCER = CCER;
+}
+
+/*
+ * GPT3 configuration.
+ */
+static const GPTConfig gpt5_cfg = {
+  RANGEFINDER_TIM_FREQ,
+  gpt5_cb,   /* Timer callback.*/
+  0,
   0
 };
 
-float rangeFinder_getDistance(void)
+void rangeFinder_control(const uint8_t index, const bool enable)
 {
-  return lastdistance;
-}
+  if(index >= RANGEFINDER_NUM || state[index] == enable)
+    return;
 
-static THD_WORKING_AREA(ultrasonic_thread_wa, 256);
-static THD_FUNCTION(ultrasonic_thread,p)
-{
-  (void)p;
-  chRegSetThreadName("Ultrasonic");
-  icuStart(&ICUD2, &icucfg2);
+  uint16_t CCER = GPTD5.tim->CCER;
+  uint16_t DIER = GPTD5.tim->DIER;
 
-  icuStartCapture(&ICUD2);
-  icuEnableNotifications(&ICUD2);
-
-  pwmStart(&PWMD4, &pwm4cfg);
-  PWMD4.tim->CCR[0] = 1;
-
-  while(true)
+  switch (index)
   {
-      /* Triggering */
-      palSetPad(GPIOB, GPIOB_ADC1_IN9);
-      chThdSleepMicroseconds(10);
-      palClearPad(GPIOB, GPIOB_ADC1_IN9);
+    case RANGEFINDER_INDEX_NOSE:
+      DIER ^= STM32_TIM_DIER_CC1IE;
+      CCER ^= STM32_TIM_CCER_CC1E;
+      break;
+    case RANGEFINDER_INDEX_LEFT_DOGBALL:
+      DIER ^= STM32_TIM_DIER_CC2IE;
+      CCER ^= STM32_TIM_CCER_CC2E;
+      break;
+    case RANGEFINDER_INDEX_RIGHT_DOGBALL:
+      DIER ^= STM32_TIM_DIER_CC3IE;
+      CCER ^= STM32_TIM_CCER_CC3E;
+      break;
+  }
 
-      chThdSleepMilliseconds(100);
-    }
+  GPTD5.tim->DIER = DIER;
+  GPTD5.tim->CCER = CCER;
+
+  captureDistance[index] = 0;
+  distance_cm[index] = 0.0f;
+
+  PWMD8.tim->CCR[index] = (enable * (index % 2 ? 9998 : 1));
+  state[index] = enable;
 }
 
-void rangeFinder_init(void){
-  chThdCreateStatic(ultrasonic_thread_wa, sizeof(ultrasonic_thread_wa), NORMALPRIO, ultrasonic_thread, NULL);
+float rangeFinder_getDistance(const uint8_t index)
+{
+  if(index > RANGEFINDER_NUM)
+    return 0.0f;
+  return distance_cm[index];
+}
 
+void rangeFinder_init(void)
+{
+  memset(distance_cm, 0, 4* RANGEFINDER_NUM);
+  memset(state,       0,                  4);
+  gptStart(&GPTD5, &gpt5_cfg);
+
+
+  GPTD5.tim->DIER = 0;
+  GPTD5.tim->CCER = 0;
+
+  GPTD5.tim->CCMR1 |= STM32_TIM_CCMR1_CC1S(1) | STM32_TIM_CCMR1_CC2S(1)|
+                  STM32_TIM_CCMR1_IC1F(3) | STM32_TIM_CCMR1_IC2F(3);
+  GPTD5.tim->CCMR2 |= STM32_TIM_CCMR2_CC3S(1) |
+                   STM32_TIM_CCMR2_IC3F(3);
+  GPTD5.tim->CNT = 5000000U;                 
+  GPTD5.tim->CR1 |= STM32_TIM_CR1_ARPE | STM32_TIM_CR1_CEN;
+
+  pwmStart(&PWMD8, &pwm8cfg);
+  PWMD8.tim->CR1 &= ~(STM32_TIM_CR1_CEN);
+  PWMD8.tim->CR1 |= STM32_TIM_CR1_CMS(1) | STM32_TIM_CR1_CEN;
 }

@@ -45,10 +45,10 @@
 #define LEDB_OFF()      (palSetPad(GPIOA, GPIOA_LED_B))
 #define LEDB_TOGGLE()   (palTogglePad(GPIOA, GPIOA_LED_B))
 
-#define LS0_DOWN()      (!palReadPad(GPIOI,GPIOI_LS0))
-#define LS1_DOWN()      (!palReadPad(GPIOI,GPIOI_LS1))
-#define LS2_DOWN()      (!palReadPad(GPIOI,GPIOI_LS2))
-#define LS3_DOWN()      (!palReadPad(GPIOI,GPIOI_LS3))
+#define LS0_DOWN()      (!palReadPad(GPIOC,GPIOC_PIN0))
+#define LS1_DOWN()      (!palReadPad(GPIOC,GPIOC_PIN1))
+#define LS2_DOWN()      (!palReadPad(GPIOA,GPIOC_PIN4))
+#define LS3_DOWN()      (!palReadPad(GPIOA,GPIOC_PIN5))
 
 //Sets of command for Pneumatics Output
 #define PN1_ON()        (palSetPad(GPIOD, GPIOD_PNEUMATICS1))
@@ -109,7 +109,7 @@
  * @brief   Enables the GPT subsystem.
  */
 #if !defined(HAL_USE_GPT) || defined(__DOXYGEN__)
-#define HAL_USE_GPT                 FALSE
+#define HAL_USE_GPT                 TRUE
 #endif
 
 /**
@@ -130,7 +130,7 @@
  * @brief   Enables the ICU subsystem.
  */
 #if !defined(HAL_USE_ICU) || defined(__DOXYGEN__)
-#define HAL_USE_ICU                 TRUE
+#define HAL_USE_ICU                 FALSE
 #endif
 
 /**

@@ -8,7 +8,6 @@
 #define LIFT_CONTROL_FREQ 500U
 
 #define   LIFT_CONNECTION_ERROR_COUNT 10U
-#define   LIFT_IN_POSITION_COUNT 50U
 
 typedef enum {
   LIFT0_NOT_CONNECTED = 1 << 0,
@@ -18,9 +17,13 @@ typedef enum {
   LIFT_NOT_CONNECTED = 0x0000ffff
 } lift_error_t;
 
-void lift_changePos(motorPosStruct* motor, const float pos_sp);
+void lift_changePos(const float pos_sp1, const float pos_sp2,
+                    const float pos_sp3, const float pos_sp4);
+
 motorPosStruct* lift_get(void);
 lift_error_t lift_getError(void);
+bool lift_inPosition(void);
 void lift_init(void);
+void lift_calibrate(void);
 
 #endif

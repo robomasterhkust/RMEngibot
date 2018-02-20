@@ -73,10 +73,8 @@ static THD_FUNCTION(matlab_thread, p)
     }
 
     txbuf_f[0] = PIMU->euler_angle[Roll];
-    txbuf_f[1] = PIMU->euler_angle[Pitch];
-    txbuf_f[2] = PIMU->euler_angle[Yaw];;
 
-    transmit_matlab(chp, NULL, txbuf_f, 0, 3);
+    transmit_matlab(chp, NULL, txbuf_f, 0, 1);
   }
 }
 
@@ -99,10 +97,14 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   chprintf(chp,"Pitch: %f\r\n",PIMU->euler_angle[Pitch]); //BR
   chprintf(chp,"Yaw: %f\r\n",PIMU->euler_angle[Yaw]); //BL
 
-  chprintf(chp,"pos: %f\r\n",lift[3]._pos);
-  chprintf(chp,"vel: %f\r\n",lift[3]._speed);
+  chprintf(chp,"dist1: %f\r\n",rangeFinder_getDistance(RANGEFINDER_INDEX_NOSE));
+  chprintf(chp,"dist2: %f\r\n",rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL));
+  chprintf(chp,"dist3: %f\r\n",rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_DOGBALL));
 
-  chprintf(chp,"dist: %f\r\n",rangeFinder_getDistance());
+  chprintf(chp,"LS1: %d\r\n",LS0_DOWN());
+  chprintf(chp,"LS2: %d\r\n",LS1_DOWN());
+  chprintf(chp,"LS3: %d\r\n",LS2_DOWN());
+  chprintf(chp,"LS4: %d\r\n",LS3_DOWN());
 
   //chprintf(chp,"Gimbal Pitch: %f\r\n",gimbal->pitch_angle);
  // chprintf(chp,"Gimbal Yaw: %f\r\n",gimbal->yaw_angle);

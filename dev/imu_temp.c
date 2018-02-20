@@ -23,7 +23,7 @@ static PWMConfig pwm3cfg = {
         100,      /* Initial PWM period 1ms.       */
         NULL,       /* Periodic call back */
         {
-                {PWM_OUTPUT_DISABLED, NULL}, /* {<pwm_initialisation_status>, <callback function of the channel> */
+                {PWM_OUTPUT_ACTIVE_HIGH, NULL}, /* {<pwm_initialisation_status>, <callback function of the channel> */
                 {PWM_OUTPUT_ACTIVE_HIGH, NULL},
                 {PWM_OUTPUT_DISABLED, NULL},
                 {PWM_OUTPUT_DISABLED, NULL}

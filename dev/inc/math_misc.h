@@ -225,4 +225,6 @@ void lpfilter_init(lpfilterStruct* const lp,
 
 float lpfilter_apply(lpfilterStruct* const lp, const float input);
 
+bool threshold_count(const bool statement, const uint16_t count, uint16_t* const curr_count);
+
 #endif

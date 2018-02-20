@@ -6,6 +6,7 @@
 #include "canBusProcess.h"
 #include "math_misc.h"
 
+#define LIFT_IN_POSITION_COUNT 50U
 #define LIFT_UPDATE_PERIOD_US  1000000/LIFT_CONTROL_FREQ
 
 static lift_error_t lift_error = 0;
@@ -13,9 +14,10 @@ static thread_t* lift_thread = NULL;
 
 static ChassisEncoder_canStruct* encoders;
 static volatile motorPosStruct motors[EXTRA_MOTOR_NUM];
+static float offset[EXTRA_MOTOR_NUM];
 static lpfilterStruct lp_speed[EXTRA_MOTOR_NUM];
-static param_t weight;
 
+static param_t weight;
 static uint8_t transition[EXTRA_MOTOR_NUM] = {0,0,0,0};
 static uint8_t on_foot[EXTRA_MOTOR_NUM] = {0,0,0,0};
 
@@ -29,6 +31,14 @@ motorPosStruct* lift_get(void)
 lift_error_t lift_getError(void)
 {
   return lift_error;
+}
+
+bool lift_inPosition(void)
+{
+  return motors[0].in_position == LIFT_IN_POSITION_COUNT
+    && motors[1].in_position == LIFT_IN_POSITION_COUNT
+    && motors[2].in_position == LIFT_IN_POSITION_COUNT
+    && motors[3].in_position == LIFT_IN_POSITION_COUNT;
 }
 
 #define   LIFT_ANGLE_PSC 7.6699e-4 //2*M_PI/0x1FFF
@@ -83,7 +93,7 @@ static void lift_encoderUpdate(void)
       }
     }
 
-    if((motors[i].pos_sp - motors[i]._pos) < 0.4f && (motors[i].pos_sp - motors[i]._pos) > -0.4f)
+    if((motors[i].pos_sp - motors[i]._pos) < 1.0f && (motors[i].pos_sp - motors[i]._pos) > -1.0f)
       motors[i].in_position++;
     else
       motors[i].in_position = 0;
@@ -93,14 +103,87 @@ static void lift_encoderUpdate(void)
   }
 }
 
-void lift_changePos(motorPosStruct* motor, const float pos_sp)
+void lift_changePos(const float pos_sp1, const float pos_sp2,
+                    const float pos_sp3, const float pos_sp4)
 {
-  if(pos_sp != motor->pos_sp)
-    motor->in_position = 0;
-  motor->pos_sp = pos_sp;
+  if(offset[0] - pos_sp1 != motors[0].pos_sp)
+  {
+    motors[0].in_position = 0;
+    motors[0].pos_sp = offset[0] - pos_sp1;
+  }
+  if(offset[1] - pos_sp2 != motors[1].pos_sp)
+  {
+    motors[1].in_position = 0;
+    motors[1].pos_sp = offset[1] - pos_sp2;
+  }
+  if(offset[2] - pos_sp3 != motors[2].pos_sp)
+  {
+    motors[2].in_position = 0;
+    motors[2].pos_sp = offset[2] - pos_sp3;
+  }
+  if(offset[3] - pos_sp4 != motors[3].pos_sp)
+  {
+    motors[3].in_position = 0;
+    motors[3].pos_sp = offset[3] - pos_sp4;
+  }
 }
 
-#define OUTPUT_MAX  32767
+void lift_calibrate(void)
+{
+  //To initialize the lift wheel, a calibration is needed
+  //CAUTION!! Moving lift wheel may cause injury, stay back during power up!!
+
+  uint8_t init_state = 0;
+
+  pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 5000));
+  chThdSleepMilliseconds(500);
+  pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 0));
+  chThdSleepMilliseconds(500);
+  pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 5000));
+  chThdSleepMilliseconds(500);
+  pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 0));
+  chThdSleepMilliseconds(500);
+  pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 5000));
+  chThdSleepMilliseconds(500);
+  pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 0));
+  chThdSleepMilliseconds(500);
+
+  while(init_state < 0x0f)
+  {
+    if(!LS2_DOWN())
+      motors[0].pos_sp+= 0.02f;
+    else
+    {
+      init_state |= 0x01;
+      offset[0] = motors[0]._pos;
+    }
+    if(!LS1_DOWN())
+      motors[1].pos_sp+= 0.02f;
+    else
+    {
+      init_state |= 0x02;
+      offset[1] = motors[1]._pos;
+    }
+    if(!LS0_DOWN())
+      motors[2].pos_sp+= 0.02f;
+    else
+    {
+      init_state |= 0x04;
+      offset[2] = motors[2]._pos;
+    }
+    if(!LS3_DOWN())
+      motors[3].pos_sp+= 0.02f;
+    else
+    {
+      init_state |= 0x08;
+      offset[3] = motors[3]._pos;
+    }
+
+    chThdSleepMilliseconds(2);
+  }
+}
+
+#define OUTPUT_MAX  16384
 
 #define ONFOOT_TRANSITION_TIME_MS   100
 #define ONFOOT_TRANSITION_TH        20.0f
