@@ -27,7 +27,7 @@ static PWMConfig pwm8cfg = {
         0
 };
 
-#define RANGEFINDER_PSC   SPEED_OF_SOUND * M_TO_CM / (float)(RANGEFINDER_TIM_FREQ * 2)
+#define RANGEFINDER_PSC  S_TO_MS / (float)(RANGEFINDER_TIM_FREQ) * RATIO /MM_TO_CM
 void gpt5_cb(GPTDriver *gptp)
 {
   uint16_t SR = gptp->tim->SR;
