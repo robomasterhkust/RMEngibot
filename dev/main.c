@@ -398,9 +398,9 @@ int main(void) {
   NORMALPRIO + 5,
                     Attitude_thread, NULL); //*
 
-  chThdCreateStatic(Island_thread_wa, sizeof(Island_thread_wa),
-  NORMALPRIO + 5,
-                    Island_thread, NULL); //*
+//  chThdCreateStatic(Island_thread_wa, sizeof(Island_thread_wa),
+//  NORMALPRIO + 5,
+//                    Island_thread, NULL); //*
 
   while (true)
   {

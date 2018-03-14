@@ -85,26 +85,22 @@ static THD_WORKING_AREA(Shell_thread_wa, 1024);
 void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
 {
   (void) argc,argv;
-  PIMUStruct PIMU = imu_get();
-//  GimbalStruct* gimbal = gimbal_get();
-//  chassisStruct* chassis = chassis_get();
-  motorPosStruct* lift = lift_get();
-  ChassisEncoder_canStruct* encoders1 = can_getExtraMotor();
-  ChassisEncoder_canStruct* encoders2 = can_getChassisMotor();
-  RC_Ctl_t* rc = RC_get();
 
-  chprintf(chp,"Roll: %f\r\n",PIMU->euler_angle[Roll]); //FR
-  chprintf(chp,"Pitch: %f\r\n",PIMU->euler_angle[Pitch]); //BR
-  chprintf(chp,"Yaw: %f\r\n",PIMU->euler_angle[Yaw]); //BL
+//  chprintf(chp,"R1: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_NOSE));
+//  chprintf(chp,"R2: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL));
+//  chprintf(chp,"R3: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_DOGBALL));
+//  chprintf(chp,"R4: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_BUM));
+//  chprintf(chp,"R5: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_BUM));
 
-  chprintf(chp,"ch0: %d\r\n",rc->rc.channel0);
-  chprintf(chp,"ch1: %d\r\n",rc->rc.channel1);
-  chprintf(chp,"ch2: %d\r\n",rc->rc.channel2);
-  chprintf(chp,"ch3: %d\r\n",rc->rc.channel3);
+  chprintf(chp,"--D8--\r\n");
+  uint8_t i;
+  for (i = 0; i < 22; i++)
+    chprintf(chp,"%x\r\n", *(uint32_t*)((uint8_t*)&(GPTD8.tim->CR1) + 4*i ));
 
-  //chprintf(chp,"Gimbal Pitch: %f\r\n",gimbal->pitch_angle);
- // chprintf(chp,"Gimbal Yaw: %f\r\n",gimbal->yaw_angle);
-  //chprintf(chp,"IMU Pitch: %f\r\n",PIMU->euler_angle[Pitch]);
+  chprintf(chp,"--D5--\r\n");
+  for (i = 0; i < 22; i++)
+    chprintf(chp,"%x\r\n", *(uint32_t*)((uint8_t*)&(GPTD5.tim->CR1) + 4*i ));
+
 }
 
 void cmd_error(BaseSequentialStream * chp, int argc, char *argv[])

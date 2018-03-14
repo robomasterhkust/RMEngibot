@@ -18,8 +18,10 @@
 #define RANGEFINDER_INDEX_NOSE            0
 #define RANGEFINDER_INDEX_LEFT_DOGBALL    1
 #define RANGEFINDER_INDEX_RIGHT_DOGBALL   2
+#define RANGEFINDER_INDEX_LEFT_BUM        3
+#define RANGEFINDER_INDEX_RIGHT_BUM       4
 
-#define RANGEFINDER_NUM                   3
+#define RANGEFINDER_NUM                   5
 
 typedef enum{
   RANGEFINDER_DISABLE = 0,

@@ -13,22 +13,8 @@ static uint8_t  state          [RANGEFINDER_NUM];
 static float    distance_cm    [RANGEFINDER_NUM];
 static uint32_t captureDistance[RANGEFINDER_NUM];
 
-static PWMConfig pwm8cfg = {
-        200000,   /* 10kHz PWM clock frequency.   */
-        10000,      /* Initial PWM period 1ms.       */
-        NULL,
-        {
-                {PWM_OUTPUT_ACTIVE_HIGH, NULL},
-                {PWM_OUTPUT_ACTIVE_LOW, NULL},
-                {PWM_OUTPUT_ACTIVE_HIGH, NULL},
-                {PWM_OUTPUT_DISABLED, NULL}
-        },
-        0,
-        0
-};
-
 #define RANGEFINDER_PSC  S_TO_MS / (float)(RANGEFINDER_TIM_FREQ) * RATIO /MM_TO_CM
-void gpt5_cb(GPTDriver *gptp)
+static void gpt5_cb(GPTDriver *gptp)
 {
   uint16_t SR = gptp->tim->SR;
   uint16_t CCER = gptp->tim->CCER;
@@ -69,16 +55,76 @@ void gpt5_cb(GPTDriver *gptp)
 
     CCER ^= STM32_TIM_CCER_CC3P;
   }
+  if(SR & STM32_TIM_SR_CC4IF)
+  {
+    if(CCER & STM32_TIM_CCER_CC4P)
+      distance_cm[RANGEFINDER_INDEX_LEFT_BUM] =
+        (float)(gptp->tim->CCR[RANGEFINDER_INDEX_LEFT_BUM] - captureDistance[RANGEFINDER_INDEX_LEFT_BUM])
+        * RANGEFINDER_PSC;
+    else
+      captureDistance[RANGEFINDER_INDEX_LEFT_BUM] =
+        gptp->tim->CCR[RANGEFINDER_INDEX_LEFT_BUM];
+
+    CCER ^= STM32_TIM_CCER_CC4P;
+  }
 
   gptp->tim->CCER = CCER;
 }
 
+static void gpt8_cb(GPTDriver *gptp)
+{
+  uint16_t SR = gptp->tim->SR;
+  uint16_t CCER = gptp->tim->CCER;
+
+  LEDG_TOGGLE();
+
+  if(SR & STM32_TIM_SR_CC1IF)
+  {
+    if(CCER & STM32_TIM_CCER_CC1P)
+      distance_cm[RANGEFINDER_INDEX_NOSE] =
+        (float)(gptp->tim->CCR[RANGEFINDER_INDEX_NOSE] - captureDistance[RANGEFINDER_INDEX_NOSE])
+        * RANGEFINDER_PSC;
+    else
+      captureDistance[RANGEFINDER_INDEX_NOSE] =
+        gptp->tim->CCR[RANGEFINDER_INDEX_NOSE];
+
+    CCER ^= STM32_TIM_CCER_CC1P;
+  }
+
+  gptp->tim->CCER = CCER;
+}
+
+/**
+ * @brief   TIM8 interrupt handler.
+ *
+ * @isr
+ */
+CH_IRQ_HANDLER(STM32_TIM8_CC_HANDLER) {
+
+  CH_IRQ_PROLOGUE();
+
+  gpt8_cb(&GPTD8);
+  GPTD8.tim->SR = 0;
+
+  CH_IRQ_EPILOGUE();
+}
+
 /*
- * GPT3 configuration.
+ * GPT5 configuration.
  */
 static const GPTConfig gpt5_cfg = {
   RANGEFINDER_TIM_FREQ,
   gpt5_cb,   /* Timer callback.*/
+  0,
+  0
+};
+
+/*
+ * GPT8 configuration.
+ */
+static const GPTConfig gpt8_cfg = {
+  RANGEFINDER_TIM_FREQ,
+  NULL,   /* Timer callback.*/
   0,
   0
 };
@@ -88,10 +134,16 @@ void rangeFinder_control(const uint8_t index, const bool enable)
   if(index >= RANGEFINDER_NUM || state[index] == enable)
     return;
 
-  uint16_t CCER = GPTD5.tim->CCER;
-  uint16_t DIER = GPTD5.tim->DIER;
+  uint16_t CCER, DIER;
+  GPTDriver* gpt;
 
-  uint16_t PWM_CCR;
+  if(index < RANGEFINDER_INDEX_RIGHT_BUM)
+    gpt = &GPTD5;
+  else
+    gpt = &GPTD8;
+
+  CCER = gpt->tim->CCER;
+  DIER = gpt->tim->DIER;
 
   captureDistance[index] = 0;
   distance_cm[index] = 0.0f;
@@ -101,24 +153,28 @@ void rangeFinder_control(const uint8_t index, const bool enable)
     case RANGEFINDER_INDEX_NOSE:
       DIER ^= STM32_TIM_DIER_CC1IE;
       CCER ^= STM32_TIM_CCER_CC1E;
-      PWM_CCR = 1;
       break;
     case RANGEFINDER_INDEX_LEFT_DOGBALL:
       DIER ^= STM32_TIM_DIER_CC2IE;
       CCER ^= STM32_TIM_CCER_CC2E;
-      PWM_CCR = 9993;
       break;
     case RANGEFINDER_INDEX_RIGHT_DOGBALL:
       DIER ^= STM32_TIM_DIER_CC3IE;
       CCER ^= STM32_TIM_CCER_CC3E;
-      PWM_CCR = 1;
+      break;
+    case RANGEFINDER_INDEX_LEFT_BUM:
+      DIER ^= STM32_TIM_DIER_CC4IE;
+      CCER ^= STM32_TIM_CCER_CC4E;
+      break;
+    case RANGEFINDER_INDEX_RIGHT_BUM:
+      DIER ^= STM32_TIM_DIER_CC1IE;
+      CCER ^= STM32_TIM_CCER_CC1E;
       break;
   }
 
-  GPTD5.tim->DIER = DIER;
-  GPTD5.tim->CCER = CCER;
+  gpt->tim->DIER = DIER;
+  gpt->tim->CCER = CCER;
 
-  PWMD8.tim->CCR[index] = PWM_CCR;
   state[index] = enable;
 }
 
@@ -132,21 +188,26 @@ float rangeFinder_getDistance(const uint8_t index)
 void rangeFinder_init(void)
 {
   memset(distance_cm, 0, 4* RANGEFINDER_NUM);
-  memset(state,       0,                  4);
+  memset(state,       0,    RANGEFINDER_NUM);
+
+  //  GPTD5 setup
   gptStart(&GPTD5, &gpt5_cfg);
-
-
   GPTD5.tim->DIER = 0;
   GPTD5.tim->CCER = 0;
-
   GPTD5.tim->CCMR1 |= STM32_TIM_CCMR1_CC1S(1) | STM32_TIM_CCMR1_CC2S(1)|
                   STM32_TIM_CCMR1_IC1F(3) | STM32_TIM_CCMR1_IC2F(3);
-  GPTD5.tim->CCMR2 |= STM32_TIM_CCMR2_CC3S(1) |
-                   STM32_TIM_CCMR2_IC3F(3);
+  GPTD5.tim->CCMR2 |= STM32_TIM_CCMR2_CC3S(1) |STM32_TIM_CCMR2_IC3F(3) |
+                  STM32_TIM_CCMR2_CC4S(1) |STM32_TIM_CCMR2_IC4F(3);
   GPTD5.tim->CNT = 10000000U;
   GPTD5.tim->CR1 |= STM32_TIM_CR1_ARPE | STM32_TIM_CR1_CEN;
 
-  pwmStart(&PWMD8, &pwm8cfg);
-  PWMD8.tim->CR1 &= ~(STM32_TIM_CR1_CEN);
-  PWMD8.tim->CR1 |= STM32_TIM_CR1_CMS(1) | STM32_TIM_CR1_CEN;
+  //  GPTD8 setup
+  gptStart(&GPTD8, &gpt8_cfg);
+  nvicDisableVector(STM32_TIM8_UP_NUMBER); //TIM8 has two interrupt vectors, we are using the CC vector
+  nvicEnableVector(STM32_TIM8_CC_NUMBER, STM32_GPT_TIM8_IRQ_PRIORITY);
+  GPTD8.tim->DIER = 0;
+  GPTD8.tim->CCER = 0;
+  GPTD8.tim->CCMR1 |= STM32_TIM_CCMR1_CC1S(1) | STM32_TIM_CCMR1_IC1F(3);
+  GPTD8.tim->CNT = 0U;
+  GPTD8.tim->CR1 |= STM32_TIM_CR1_ARPE | STM32_TIM_CR1_CEN;
 }
