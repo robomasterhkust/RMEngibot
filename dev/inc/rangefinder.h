@@ -10,7 +10,10 @@
 
 #define RANGEFINDER_TIM_FREQ        100000
 #define M_TO_CM                     100.0f
-#define SPEED_OF_SOUND              343.2f
+//#define SPEED_OF_SOUND              343.2f
+#define S_TO_MS 					1000.0f
+#define RATIO						100.0f
+#define MM_TO_CM					10
 
 #define RANGEFINDER_INDEX_NOSE            0
 #define RANGEFINDER_INDEX_LEFT_DOGBALL    1
