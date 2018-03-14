@@ -9,8 +9,8 @@
 #define LIFT_IN_POSITION_COUNT 50U
 #define LIFT_UPDATE_PERIOD_US  1000000/LIFT_CONTROL_FREQ
 
+static lift_state_t lift_state = 0;
 static lift_error_t lift_error = 0;
-static thread_t* lift_thread = NULL;
 
 static ChassisEncoder_canStruct* encoders;
 static volatile motorPosStruct motors[EXTRA_MOTOR_NUM];
@@ -30,7 +30,9 @@ motorPosStruct* lift_get(void)
 
 lift_error_t lift_getError(void)
 {
-  return lift_error;
+  uint32_t errorFlag = lift_error;
+  lift_error = 0;
+  return errorFlag;
 }
 
 bool lift_inPosition(void)
@@ -47,11 +49,11 @@ bool lift_inPosition(void)
 static void lift_kill(void)
 {
   LEDY_ON();
-  if(lift_thread != NULL)
+
+  if(lift_state == LIFT_RUNNING)
   {
-    chThdTerminate(lift_thread);
+    lift_state = LIFT_ERROR;
     can_motorSetCurrent(LIFT_CAN, CHASSIS_CAN_EID, 0, 0, 0, 0);
-    lift_thread = NULL;
   }
 }
 
@@ -89,6 +91,7 @@ static void lift_encoderUpdate(void)
       {
         motors[i]._wait_count = 1;
         lift_error |= LIFT0_NOT_CONNECTED << i;
+
         lift_kill();
       }
     }
@@ -213,7 +216,7 @@ static THD_FUNCTION(lift_control, p)
 
   float output[4];
   uint32_t tick = chVTGetSystemTimeX();
-  while(!chThdShouldTerminateX())
+  while(true)
   {
     tick += US2ST(LIFT_UPDATE_PERIOD_US);
     if(tick > chVTGetSystemTimeX())
@@ -246,7 +249,8 @@ static THD_FUNCTION(lift_control, p)
     for(i = 0; i < 4; i++)
       output[i] = lift_controlPos(&motors[i], &controllers[i], on_foot[i]);
 
-    can_motorSetCurrent(LIFT_CAN, CHASSIS_CAN_EID,
+    if(lift_state == LIFT_RUNNING)
+      can_motorSetCurrent(LIFT_CAN, CHASSIS_CAN_EID,
         	output[3], output[2], output[1], output[0]);
   }
 }
@@ -281,7 +285,8 @@ void lift_init(void)
   params_set(&controllers[3], 16,3,FLLName,subname_PID,PARAM_PUBLIC);
   params_set(&weight, 17,1,weightName,weightSubName,PARAM_PUBLIC);
 
-  lift_thread = chThdCreateStatic(lift_control_wa, sizeof(lift_control_wa),
+  chThdCreateStatic(lift_control_wa, sizeof(lift_control_wa),
                           NORMALPRIO, lift_control, NULL);
 
+  lift_state = LIFT_RUNNING;
 }

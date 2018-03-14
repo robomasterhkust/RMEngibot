@@ -24,6 +24,23 @@ chassisStruct* chassis_get(void)
   return &chassis;
 }
 
+uint32_t chassis_getError(void)
+{
+  uint32_t errorFlag = chassis.errorFlag;
+  chassis.errorFlag = 0;
+  return errorFlag;
+}
+
+static void chassis_kill(void)
+{
+  LEDY_ON();
+  if(chassis.state == CHASSIS_RUNNING)
+  {
+    chassis.state = CHASSIS_ERROR;
+    can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID, 0, 0, 0, 0);
+  }
+}
+
 #define   CHASSIS_ANGLE_PSC 7.6699e-4 //2*M_PI/0x1FFF
 #define   CHASSIS_SPEED_PSC 1.0f/((float)CHASSIS_GEAR_RATIO)
 #define   CHASSIS_CONNECTION_ERROR_COUNT 20U
@@ -47,7 +64,9 @@ static void chassis_encoderUpdate(void)
       chassis._motors[i]._wait_count++;
       if(chassis._motors[i]._wait_count > CHASSIS_CONNECTION_ERROR_COUNT)
       {
-      //  chassis.errorFlag |= CHASSIS_YAW_NOT_CONNECTED;
+        chassis_kill();
+
+        chassis.errorFlag |= CHASSIS0_NOT_CONNECTED << i;
         chassis._motors[i]._wait_count = 1;
       }
     }
@@ -64,62 +83,6 @@ static int16_t chassis_controlSpeed(const motorStruct* motor, pi_controller_t* c
   controller->error_int = boundOutput(controller->error_int, controller->error_int_max);
   float output = error*controller->kp + controller->error_int;
   return (int16_t)(boundOutput(output,OUTPUT_MAX));
-}
-
-static THD_WORKING_AREA(chassis_control_wa, 2048);
-static THD_FUNCTION(chassis_control, p)
-{
-  (void)p;
-  chRegSetThreadName("chassis controller");
-
-  RC_Ctl_t* pRC = RC_get();
-
-  uint32_t tick = chVTGetSystemTimeX();
-  while(1)
-  {
-    tick += US2ST(CHASSIS_UPDATE_PERIOD_US);
-    if(tick > chVTGetSystemTimeX())
-      chThdSleepUntil(tick);
-    else
-    {
-      tick = chVTGetSystemTimeX();
-    }
-
-    chassis_encoderUpdate();
-    drive_kinematics(pRC->rc.channel0, pRC->rc.channel1, pRC->rc.channel2);
-  }
-}
-
-static const FRvelName = "FR_vel";
-static const FLvelName = "FL_vel";
-static const BLvelName = "BL_vel";
-static const BRvelName = "BR_vel";
-
-#define MOTOR_VEL_INT_MAX 12000U
-void chassis_init(void)
-{
-  memset(&chassis,0,sizeof(chassisStruct));
-
-  chassis.drive_sp = 0.0f;
-  chassis.strafe_sp = 0.0f;
-  chassis.heading_sp = 0.0f;
-  uint8_t i;
-  params_set(&motor_vel_controllers[FRONT_LEFT], 9,2,FLvelName,subname_PI,PARAM_PUBLIC);
-  params_set(&motor_vel_controllers[FRONT_RIGHT], 10,2,FRvelName,subname_PI,PARAM_PUBLIC);
-  params_set(&motor_vel_controllers[BACK_LEFT], 11,2,BLvelName,subname_PI,PARAM_PUBLIC);
-  params_set(&motor_vel_controllers[BACK_RIGHT], 12,2,BRvelName,subname_PI,PARAM_PUBLIC);
-
-  for (i = 0; i < 4; i++)
-  {
-    chassis._motors[i].speed_sp = 0.0f;
-    lpfilter_init(lp_speed + i, CHASSIS_UPDATE_FREQ, 20);
-    motor_vel_controllers[i].error_int = 0.0f;
-    motor_vel_controllers[i].error_int_max = MOTOR_VEL_INT_MAX;
-  }
-  chassis._pGyro = gyro_get();
-  chassis._encoders = can_getChassisMotor();
-  chThdCreateStatic(chassis_control_wa, sizeof(chassis_control_wa),
-                          NORMALPRIO, chassis_control, NULL);
 }
 
 void update_heading(void)
@@ -176,4 +139,63 @@ void drive_kinematics(int RX_X2, int RX_Y1, int RX_X1)
   can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID,
     		output[FRONT_RIGHT], output[BACK_RIGHT], output[FRONT_LEFT], output[BACK_LEFT]); //FL,FR,BR,BL
 
+}
+
+static THD_WORKING_AREA(chassis_control_wa, 2048);
+static THD_FUNCTION(chassis_control, p)
+{
+  (void)p;
+  chRegSetThreadName("chassis controller");
+
+  RC_Ctl_t* pRC = RC_get();
+
+  uint32_t tick = chVTGetSystemTimeX();
+  while(1)
+  {
+    tick += US2ST(CHASSIS_UPDATE_PERIOD_US);
+    if(tick > chVTGetSystemTimeX())
+      chThdSleepUntil(tick);
+    else
+    {
+      tick = chVTGetSystemTimeX();
+    }
+
+    chassis_encoderUpdate();
+    if(chassis.state == CHASSIS_RUNNING)
+      drive_kinematics(pRC->rc.channel0, pRC->rc.channel1, pRC->rc.channel2);
+  }
+}
+
+static const FRvelName = "FR_vel";
+static const FLvelName = "FL_vel";
+static const BLvelName = "BL_vel";
+static const BRvelName = "BR_vel";
+
+#define MOTOR_VEL_INT_MAX 12000U
+void chassis_init(void)
+{
+  memset(&chassis,0,sizeof(chassisStruct));
+
+  chassis.drive_sp = 0.0f;
+  chassis.strafe_sp = 0.0f;
+  chassis.heading_sp = 0.0f;
+  uint8_t i;
+  params_set(&motor_vel_controllers[FRONT_LEFT], 9,2,FLvelName,subname_PI,PARAM_PUBLIC);
+  params_set(&motor_vel_controllers[FRONT_RIGHT], 10,2,FRvelName,subname_PI,PARAM_PUBLIC);
+  params_set(&motor_vel_controllers[BACK_LEFT], 11,2,BLvelName,subname_PI,PARAM_PUBLIC);
+  params_set(&motor_vel_controllers[BACK_RIGHT], 12,2,BRvelName,subname_PI,PARAM_PUBLIC);
+
+  for (i = 0; i < 4; i++)
+  {
+    chassis._motors[i].speed_sp = 0.0f;
+    lpfilter_init(lp_speed + i, CHASSIS_UPDATE_FREQ, 20);
+    motor_vel_controllers[i].error_int = 0.0f;
+    motor_vel_controllers[i].error_int_max = MOTOR_VEL_INT_MAX;
+  }
+  chassis._pGyro = gyro_get();
+  chassis._encoders = can_getChassisMotor();
+  chThdCreateStatic(chassis_control_wa, sizeof(chassis_control_wa),
+                          NORMALPRIO, chassis_control, NULL);
+
+  chassis.state = CHASSIS_RUNNING;
 }

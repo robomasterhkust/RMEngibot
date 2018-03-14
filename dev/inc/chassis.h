@@ -31,6 +31,20 @@
 
 #define CHASSIS_USE_POS_MOTOR
 
+typedef enum {
+  CHASSIS_UNINIT = 0,
+  CHASSIS_RUNNING,
+  CHASSIS_ERROR
+} chassis_state_t;
+
+typedef enum {
+  CHASSIS0_NOT_CONNECTED = 1 << 0,
+  CHASSIS1_NOT_CONNECTED = 1 << 1,
+  CHASSIS2_NOT_CONNECTED = 1 << 2,
+  CHASSIS3_NOT_CONNECTED = 1 << 3,
+  CHASSIS_NOT_CONNECTED = 0x0000ffff
+} chassis_error_t;
+
 typedef struct{
   float speed_sp;
   float _speed;
@@ -52,6 +66,8 @@ typedef struct{
 
 typedef struct{
   motorStruct _motors[CHASSIS_MOTOR_NUM];
+  chassis_state_t state;
+  chassis_error_t errorFlag;
 
   #ifdef CHASSIS_USE_POS_MOTOR
     motorPosStruct pos_motors[4];
@@ -68,6 +84,7 @@ typedef struct{
 // MATH definition
 
 chassisStruct* chassis_get(void);
+uint32_t chassis_getError(void);
+
 void chassis_init(void);
-void drive_kinematics(int RX_X2, int RX_Y1, int RX_X1);
 #endif /* INC_CHASSIS_H_ */

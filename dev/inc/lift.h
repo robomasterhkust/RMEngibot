@@ -10,6 +10,12 @@
 #define   LIFT_CONNECTION_ERROR_COUNT 10U
 
 typedef enum {
+  LIFT_UNINIT = 0,
+  LIFT_RUNNING,
+  LIFT_ERROR
+} lift_state_t;
+
+typedef enum {
   LIFT0_NOT_CONNECTED = 1 << 0,
   LIFT1_NOT_CONNECTED = 1 << 1,
   LIFT2_NOT_CONNECTED = 1 << 2,

@@ -107,6 +107,19 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   //chprintf(chp,"IMU Pitch: %f\r\n",PIMU->euler_angle[Pitch]);
 }
 
+void cmd_error(BaseSequentialStream * chp, int argc, char *argv[])
+{
+  uint32_t error = chassis_getError();
+  if(error)
+    chprintf(chp,"CHASSIS ERROR: %X\r\n", error);
+
+  error = lift_getError();
+  if(error)
+    chprintf(chp,"LIFT ERROR:    %X\r\n", error);
+
+  LEDY_OFF();
+}
+
 /**
  * @brief Start the data tramsmission to matlab
  * @note caution of data flooding to the serial port
@@ -217,6 +230,7 @@ static const ShellCommand commands[] =
   {"cal", cmd_calibrate},
   {"temp", cmd_temp},
   {"gyro", cmd_gyro},
+  {"WTF", cmd_error},
   {"\xEE", cmd_data},
   #ifdef PARAMS_USE_USB
     {"\xFD",cmd_param_scale},
