@@ -148,6 +148,7 @@ static THD_FUNCTION(chassis_control, p)
   chRegSetThreadName("chassis controller");
 
   RC_Ctl_t* pRC = RC_get();
+  chThdSleepSeconds(2);
 
   uint32_t tick = chVTGetSystemTimeX();
   while(1)
@@ -164,8 +165,8 @@ static THD_FUNCTION(chassis_control, p)
     if(chassis.state == CHASSIS_RUNNING)
       drive_kinematics(pRC->rc.channel0, pRC->rc.channel1, pRC->rc.channel2);
   }
-}
 
+}
 static const FRvelName = "FR_vel";
 static const FLvelName = "FL_vel";
 static const BLvelName = "BL_vel";
