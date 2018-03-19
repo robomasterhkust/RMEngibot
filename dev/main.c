@@ -112,7 +112,7 @@ static THD_FUNCTION(Island_thread, p)
   const char subNamePos[] = "1 2 3 4 5 6 7";
 
   const char nameTH[] = "island_th";
-  const char subNameTH[] = "Up_Pitch Dn_Pitch1 Dn_Pitch2 Dn_Pitch3 Up_RF1 Up_RF2 7";
+  const char subNameTH[] = "Up_Pitch Dn_Pitch1 Dn_Pitch2 Dn_Pitch3 Up_RF1 Up_RF2 Up_RF3";
   params_set(pos_sp,18,7,namePos,subNamePos,PARAM_PUBLIC);
   params_set(threshold,19,7,nameTH,subNameTH,PARAM_PUBLIC);
 
@@ -121,7 +121,7 @@ static THD_FUNCTION(Island_thread, p)
   bool s1_reset = false;
   float pos_cmd = 0.0f;
 
-  uint16_t count = 0, count_left = 0, count_right = 0, count_onGround = 0;
+  uint16_t count = 0, count_left = 0, count_right = 0, count_onGround = 0,count_back_left=0,count_back_right =0;
 
   chThdSleepSeconds(2);
   if(!lift_getError())
@@ -174,7 +174,10 @@ static THD_FUNCTION(Island_thread, p)
       case STATE_ONFOOT:
         DOG_ERECT();
         rangeFinder_control(RANGEFINDER_INDEX_NOSE, ENABLE);
+        rangeFinder_control(RANGEFINDER_INDEX_LEFT_BUM,DISABLE);
+        rangeFinder_control(RANGEFINDER_INDEX_RIGHT_BUM,DISABLE);
 
+        
         //Pos0: on_foot position setpoint
         lift_changePos(pos_sp[0] - pos_cmd, pos_sp[0] - pos_cmd ,
                       pos_sp[0] - pos_cmd, pos_sp[0] - pos_cmd);
@@ -290,11 +293,19 @@ static THD_FUNCTION(Island_thread, p)
       case STATE_CRAW:
         rangeFinder_control(RANGEFINDER_INDEX_LEFT_DOGBALL,  DISABLE);
         rangeFinder_control(RANGEFINDER_INDEX_RIGHT_DOGBALL, DISABLE);
+        if(island_state == STATE_STAIR_1){
+          rangeFinder_control(RANGEFINDER_INDEX_LEFT_BUM,ENABLE);
+          rangeFinder_control(RANGEFINDER_INDEX_RIGHT_BUM,ENABLE);
+        }
 
         lift_changePos(pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd ,
                       pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd);
 
-        if(S2 == ASCEND_MODE && (s1_reset && S1 == S1_ASCEND))
+
+
+        if((S2 == ASCEND_MODE && (s1_reset && S1 == S1_ASCEND))||
+          (threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_BUM) < threshold[6], 24, &count_back_right)
+            &&threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_BUM) < threshold[6], 24, &count_back_left)))
         {
           if(island_state == STATE_STAIR_1)
             robot_state = STATE_ONFOOT;
@@ -398,10 +409,9 @@ int main(void) {
   NORMALPRIO + 5,
                     Attitude_thread, NULL); //*
 
-//  chThdCreateStatic(Island_thread_wa, sizeof(Island_thread_wa),
-//  NORMALPRIO + 5,
-//                    Island_thread, NULL); //*
-
+  chThdCreateStatic(Island_thread_wa, sizeof(Island_thread_wa),
+  NORMALPRIO + 5,
+                    Island_thread, NULL); //*
   while (true)
   {
     chThdSleepSeconds(10);

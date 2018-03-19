@@ -76,17 +76,25 @@ static void gpt8_cb(GPTDriver *gptp)
   uint16_t SR = gptp->tim->SR;
   uint16_t CCER = gptp->tim->CCER;
 
-  LEDG_TOGGLE();
+  //LEDG_TOGGLE();
 
   if(SR & STM32_TIM_SR_CC1IF)
   {
-    if(CCER & STM32_TIM_CCER_CC1P)
-      distance_cm[RANGEFINDER_INDEX_NOSE] =
-        (float)(gptp->tim->CCR[RANGEFINDER_INDEX_NOSE] - captureDistance[RANGEFINDER_INDEX_NOSE])
-        * RANGEFINDER_PSC;
+    if(CCER & STM32_TIM_CCER_CC1P){
+      if(gptp->tim->CCR[0] > captureDistance[RANGEFINDER_INDEX_RIGHT_BUM]){
+        distance_cm[RANGEFINDER_INDEX_RIGHT_BUM] =
+          (float)(gptp->tim->CCR[0] - captureDistance[RANGEFINDER_INDEX_RIGHT_BUM])
+          * RANGEFINDER_PSC;
+      }
+      else{
+        distance_cm[RANGEFINDER_INDEX_RIGHT_BUM] =
+        (float)(65535-captureDistance[RANGEFINDER_INDEX_RIGHT_BUM] + gptp->tim->CCR[0])* RANGEFINDER_PSC;
+      }
+    }
+
     else
-      captureDistance[RANGEFINDER_INDEX_NOSE] =
-        gptp->tim->CCR[RANGEFINDER_INDEX_NOSE];
+      captureDistance[RANGEFINDER_INDEX_RIGHT_BUM] =
+        gptp->tim->CCR[0];
 
     CCER ^= STM32_TIM_CCER_CC1P;
   }
