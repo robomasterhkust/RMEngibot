@@ -34,7 +34,7 @@ uint32_t chassis_getError(void)
 static void chassis_kill(void)
 {
   LEDY_ON();
-  if(chassis.state == CHASSIS_RUNNING)
+  if(chassis.state & CHASSIS_RUNNING)
   {
     chassis.state = CHASSIS_ERROR;
     can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID, 0, 0, 0, 0);
@@ -85,51 +85,23 @@ static int16_t chassis_controlSpeed(const motorStruct* motor, pi_controller_t* c
   return (int16_t)(boundOutput(output,OUTPUT_MAX));
 }
 
-void update_heading(void)
+static void drive_kinematics(const float strafe_sp, const float drive_sp, const float heading_sp)
 {
-  /*TODO THIS WILL MAKE YOU LOSE HEADING IN A COLLISION, add control*/
-  chassis.heading_sp = chassis._pGyro->angle;
-}
-
-void drive_kinematics(int RX_X2, int RX_Y1, int RX_X1)
-{
-  // Set dead-zone to 6% range to provide smoother control
-  float THRESHOLD = (RC_CH_VALUE_MAX - RC_CH_VALUE_MIN)*3/100;
-
-  // Create "dead-zone" for chassis.drive_sp
-  if(ABS(RX_X2 - RC_CH_VALUE_OFFSET) < THRESHOLD)
-    RX_X2 = RC_CH_VALUE_OFFSET;
-
-  // Create "dead-zone" for chassis.strafe_sp
-  if(ABS(RX_Y1 - RC_CH_VALUE_OFFSET) < THRESHOLD)
-    RX_Y1 = RC_CH_VALUE_OFFSET;
-
-  // Create "dead-zone" for chassis.heading_sp
-  if(ABS(RX_X1 - RC_CH_VALUE_OFFSET) < THRESHOLD)
-    RX_X1 = RC_CH_VALUE_OFFSET;
-  else
-    chassis.heading_sp = chassis._pGyro->angle;
-
   // Compute the Heading correction
-  float heading_correction = chassis.heading_sp - chassis._pGyro->angle;
-
-  //Remote Control Commands, Mapped to match min and max CURRENT
-  chassis.strafe_sp  = (int16_t)mapInput(RX_X2, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX, -CURRENT_MAX, CURRENT_MAX);
-  chassis.drive_sp = (int16_t)mapInput(RX_Y1, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX, -CURRENT_MAX, CURRENT_MAX);
-  chassis.heading_sp = (int16_t)mapInput(RX_X1, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX, -CURRENT_MAX, CURRENT_MAX);
+  float heading_correction = heading_sp - chassis._pGyro->angle;
   //heading_correction = HEADING_SCALE * (int16_t)map(heading_correction, HEADING_MIN, HEADING_MAX, CURRENT_MIN, CURRENT_MAX);
   heading_correction = 0.0f;
   // For later coordinate with chassis
   int rotate_feedback = 0;
 
   chassis._motors[FRONT_RIGHT].speed_sp =
-    ((-chassis.strafe_sp - chassis.drive_sp - chassis.heading_sp) + rotate_feedback + heading_correction);   // CAN ID: 0x201
+    ((-strafe_sp - drive_sp - heading_sp) + rotate_feedback + heading_correction);   // CAN ID: 0x201
   chassis._motors[BACK_RIGHT].speed_sp =
-    ((-chassis.strafe_sp + chassis.drive_sp - chassis.heading_sp) + rotate_feedback + heading_correction);       // CAN ID: 0x202
+    ((-strafe_sp + drive_sp - heading_sp) + rotate_feedback + heading_correction);       // CAN ID: 0x202
   chassis._motors[FRONT_LEFT].speed_sp =
-    ((chassis.strafe_sp + chassis.drive_sp - chassis.heading_sp) + rotate_feedback + heading_correction);       // CAN ID: 0x203
+    ((strafe_sp + drive_sp - heading_sp) + rotate_feedback + heading_correction);       // CAN ID: 0x203
   chassis._motors[BACK_LEFT].speed_sp =
-    ((chassis.strafe_sp - chassis.drive_sp - chassis.heading_sp) + rotate_feedback + heading_correction);     // CAN ID: 0x204
+    ((strafe_sp - drive_sp - heading_sp) + rotate_feedback + heading_correction);     // CAN ID: 0x204
 
   uint8_t i;
   int16_t output[4];
@@ -141,6 +113,69 @@ void drive_kinematics(int RX_X2, int RX_Y1, int RX_X1)
 
 }
 
+/*
+ * @brief     Stop chassis auto-driving by setting the speed commands to invalid values
+ * @param[in] dir:    set the automation command of chassis direction
+ *                    (CHASSIS_STRAFE, CHASSIS_DRIVE, CHASSIS_HEADING)
+ * @param[in] cmd:    speed value of automatic driver, set value CHASSIS_DISABLE_AUTO to disable the auto driver
+ */
+void chassis_autoCmd(const uint8_t dir, const float cmd)
+{
+  if(dir > 2)
+    return;
+
+  switch(dir)
+  {
+    case CHASSIS_STRAFE:
+      if(cmd == CHASSIS_DISABLE_AUTO)
+      {
+        chassis.strafe_cmd = 0.0f;
+        chassis.state &= ~(CHASSIS_AUTO_STRAFE);
+      }
+      else if(cmd != chassis.strafe_cmd)
+      {
+        chassis.strafe_cmd = cmd;
+        chassis.state |= CHASSIS_AUTO_STRAFE;
+      }
+      break;
+    case CHASSIS_DRIVE:
+      if(cmd == CHASSIS_DISABLE_AUTO)
+      {
+        chassis.drive_cmd = 0.0f;
+        chassis.state &= ~(CHASSIS_AUTO_DRIVE);
+      }
+      else if(cmd != chassis.drive_cmd)
+      {
+        chassis.drive_cmd = cmd;
+        chassis.state |= CHASSIS_AUTO_DRIVE;
+      }
+      break;
+    case CHASSIS_HEADING:
+      if(cmd == CHASSIS_DISABLE_AUTO)
+      {
+        chassis.heading_cmd = 0.0f;
+        chassis.state &= ~(CHASSIS_AUTO_HEADING);
+      }
+      else if(cmd != chassis.heading_cmd)
+      {
+        chassis.heading_cmd = cmd;
+        chassis.state |= CHASSIS_AUTO_HEADING;
+      }
+      break;
+  }
+}
+
+/*
+ * @brief Stop chassis auto-driving by setting the speed commands to invalid values
+ */
+void chassis_killAutoDriver(void)
+{
+  chassis.state &= ~(CHASSIS_AUTO);
+  chassis.strafe_cmd = 0.0f;
+  chassis.drive_cmd = 0.0f;
+  chassis.heading_cmd = 0.0f;
+}
+
 static THD_WORKING_AREA(chassis_control_wa, 2048);
 static THD_FUNCTION(chassis_control, p)
 {
@@ -148,6 +183,13 @@ static THD_FUNCTION(chassis_control, p)
   chRegSetThreadName("chassis controller");
 
   RC_Ctl_t* pRC = RC_get();
+  //reserved for manual override of auto-driving
+  uint16_t strafe_count = 0, drive_count = 0, heading_count = 0;
+  uint16_t strafe_th = 65535, drive_th = 65535, heading_th = 65535;
+
+  // Set dead-zone to 6% range to provide smoother control
+  const float THRESHOLD = (RC_CH_VALUE_MAX - RC_CH_VALUE_MIN)*3/100;
+
   chThdSleepSeconds(2);
 
   uint32_t tick = chVTGetSystemTimeX();
@@ -162,8 +204,87 @@ static THD_FUNCTION(chassis_control, p)
     }
 
     chassis_encoderUpdate();
-    if(chassis.state == CHASSIS_RUNNING)
-      drive_kinematics(pRC->rc.channel0, pRC->rc.channel1, pRC->rc.channel2);
+
+    int16_t RX_X2 = pRC->rc.channel0 ,
+            RX_Y1 = pRC->rc.channel1 ,
+            RX_X1 = pRC->rc.channel2;
+
+    if(chassis.state & CHASSIS_RUNNING)
+    {
+      float strafe_sp, drive_sp, heading_sp; //These are real speed setpoints to chassis
+
+      if(
+          (chassis.state & CHASSIS_AUTO_STRAFE) &&
+          threshold_count(ABS(RX_X2 - RC_CH_VALUE_OFFSET) > THRESHOLD, strafe_th, &strafe_count)
+        )
+      {
+        chassis.state &= ~(CHASSIS_AUTO_STRAFE); //Manual override of automatic control
+        chassis.strafe_cmd = 0.0f;
+        strafe_th = 65535;
+      }
+      if(
+          (chassis.state & CHASSIS_AUTO_DRIVE) &&
+          threshold_count(ABS(RX_Y1 - RC_CH_VALUE_OFFSET) > THRESHOLD, drive_th, &drive_count)
+        )
+      {
+        chassis.state &= ~(CHASSIS_AUTO_DRIVE); //Manual override of automatic control
+        chassis.drive_cmd = 0.0f;
+        drive_th = 65535;
+      }
+      if(
+          (chassis.state & CHASSIS_AUTO_HEADING) &&
+          threshold_count(ABS(RX_X1 - RC_CH_VALUE_OFFSET) > THRESHOLD, heading_th, &heading_count)
+        )
+      {
+        chassis.state &= ~(CHASSIS_AUTO_HEADING); //Manual override of automatic control
+        chassis.heading_cmd = 0.0f;
+        heading_th = 65535;
+      }
+
+      // Create "dead-zone" for chassis.drive_sp
+      if((ABS(RX_X2 - RC_CH_VALUE_OFFSET) < THRESHOLD))
+      {
+        RX_X2 = RC_CH_VALUE_OFFSET;
+        if(chassis.state & CHASSIS_AUTO_STRAFE)
+          strafe_th = 100;
+      }
+      // Create "dead-zone" for chassis.strafe_sp
+      if((ABS(RX_Y1 - RC_CH_VALUE_OFFSET) < THRESHOLD))
+      {
+        RX_Y1 = RC_CH_VALUE_OFFSET;
+        if(chassis.state & CHASSIS_AUTO_DRIVE)
+          drive_th = 100;
+      }
+      // Create "dead-zone" for chassis.heading_sp
+      if((ABS(RX_X1 - RC_CH_VALUE_OFFSET) < THRESHOLD))
+      {
+        RX_X1 = RC_CH_VALUE_OFFSET;
+        if(chassis.state & CHASSIS_AUTO_HEADING)
+          heading_th = 100;
+      }
+
+      //These are remote control commands, mapped to match min and max CURRENT
+      float strafe_input  = mapInput(RX_X2, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX, -CURRENT_MAX, CURRENT_MAX),
+            drive_input   = mapInput(RX_Y1, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX, -CURRENT_MAX, CURRENT_MAX),
+            heading_input = mapInput(RX_X1, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX, -CURRENT_MAX, CURRENT_MAX);
+
+      if(chassis.state & CHASSIS_AUTO_STRAFE)
+        strafe_sp = chassis.strafe_cmd;
+      else
+        strafe_sp = strafe_input;
+
+      if(chassis.state & CHASSIS_AUTO_DRIVE)
+        drive_sp = chassis.drive_cmd;
+      else
+        drive_sp = drive_input;
+
+      if(chassis.state & CHASSIS_AUTO_HEADING)
+        heading_sp = chassis.heading_cmd;
+      else
+        heading_sp = heading_input;
+
+      drive_kinematics(strafe_sp, drive_sp, heading_sp);
+    }
   }
 
 }
@@ -177,9 +298,6 @@ void chassis_init(void)
 {
   memset(&chassis,0,sizeof(chassisStruct));
 
-  chassis.drive_sp = 0.0f;
-  chassis.strafe_sp = 0.0f;
-  chassis.heading_sp = 0.0f;
   uint8_t i;
   params_set(&motor_vel_controllers[FRONT_LEFT], 9,2,FLvelName,subname_PI,PARAM_PUBLIC);
   params_set(&motor_vel_controllers[FRONT_RIGHT], 10,2,FRvelName,subname_PI,PARAM_PUBLIC);

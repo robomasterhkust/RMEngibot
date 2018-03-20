@@ -35,10 +35,16 @@ float lpfilter_apply(lpfilterStruct* const lp, const float input)
 
 bool threshold_count(const bool statement, const uint16_t count, uint16_t* const curr_count)
 {
-  if(statement)
+  if(statement && *curr_count < 65534)
     *curr_count += 1;
   else
     *curr_count = 0;
 
-  return *curr_count >= count;
+  if(*curr_count >= count)
+  {
+    *curr_count = 0;
+    return true;
+  }
+  else
+    return false;
 }

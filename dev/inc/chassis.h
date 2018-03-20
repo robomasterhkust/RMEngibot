@@ -30,11 +30,22 @@
 #define ABS(x)     ( ((x) > 0) ? (x) : (-(x)) ) //return abs value of x
 
 #define CHASSIS_USE_POS_MOTOR
+#define CHASSIS_DISABLE_AUTO      200000.0f
 
 typedef enum {
-  CHASSIS_UNINIT = 0,
-  CHASSIS_RUNNING,
-  CHASSIS_ERROR
+  CHASSIS_STRAFE =  0,
+  CHASSIS_DRIVE =   1,
+  CHASSIS_HEADING = 2
+} chassis_dir_t;
+
+typedef enum {
+  CHASSIS_UNINIT         = 0,
+  CHASSIS_RUNNING        = 1,
+  CHASSIS_AUTO_STRAFE    = 2,
+  CHASSIS_AUTO_DRIVE     = 4,
+  CHASSIS_AUTO_HEADING   = 8,
+  CHASSIS_AUTO           = 14,
+  CHASSIS_ERROR          = 32
 } chassis_state_t;
 
 typedef enum {
@@ -73,15 +84,19 @@ typedef struct{
     motorPosStruct pos_motors[4];
   #endif
 
-  float heading_sp;
-  float drive_sp;
-  float strafe_sp;
+  float heading_cmd;
+  float drive_cmd;
+  float strafe_cmd; //These are external commands given from Auto-driving controllers
+                    //Which can be manually overriden
 
   ChassisEncoder_canStruct* _encoders;
   PGyroStruct _pGyro;
 } chassisStruct;
 
 // MATH definition
+
+void chassis_killAutoDriver(void);
+void chassis_autoCmd(const uint8_t dir, const float cmd);
 
 chassisStruct* chassis_get(void);
 uint32_t chassis_getError(void);

@@ -85,21 +85,32 @@ static THD_WORKING_AREA(Shell_thread_wa, 1024);
 void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
 {
   (void) argc,argv;
+  PIMUStruct pIMU = imu_get();
+  chassisStruct* chassis = chassis_get();
 
-//  chprintf(chp,"R1: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_NOSE));
-//  chprintf(chp,"R2: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL));
-//  chprintf(chp,"R3: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_DOGBALL));
-//  chprintf(chp,"R4: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_BUM));
-//  chprintf(chp,"R5: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_BUM));
+  chprintf(chp,"R1: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_NOSE));
+  chprintf(chp,"R2: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL));
+  chprintf(chp,"R3: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_DOGBALL));
+  chprintf(chp,"R4: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_BUM));
+  chprintf(chp,"R5: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_BUM));
+  chprintf(chp,"Pitch: %f\r\n",  pIMU->euler_angle[Pitch]);
+  chprintf(chp,"State: %x\r\n",  chassis->state);
+}
 
-  chprintf(chp,"--D8--\r\n");
-  uint8_t i;
-  for (i = 0; i < 22; i++)
-    chprintf(chp,"%x\r\n", *(uint32_t*)((uint8_t*)&(GPTD8.tim->CR1) + 4*i ));
+void cmd_drive(BaseSequentialStream * chp, int argc, char *argv[])
+{
+  switch(*(argv[0]))
+  {
+    case 's':
+      chassis_autoCmd(CHASSIS_STRAFE, -1.0f); break;
+    case 'd':
+      chassis_autoCmd(CHASSIS_DRIVE, -1.0f); break;
+    case 'h':
+      chassis_autoCmd(CHASSIS_HEADING, -1.0f); break;
+    case 'k':
+      chassis_killAutoDriver(); break;
+  }
 
-  chprintf(chp,"--D5--\r\n");
-  for (i = 0; i < 22; i++)
-    chprintf(chp,"%x\r\n", *(uint32_t*)((uint8_t*)&(GPTD5.tim->CR1) + 4*i ));
 
 }
 
@@ -223,6 +234,7 @@ void cmd_gyro(BaseSequentialStream * chp, int argc, char *argv[])
 static const ShellCommand commands[] =
 {
   {"test", cmd_test},
+  {"drive", cmd_drive},
   {"cal", cmd_calibrate},
   {"temp", cmd_temp},
   {"gyro", cmd_gyro},
