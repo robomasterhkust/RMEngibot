@@ -78,10 +78,9 @@ static uint16_t gyro_read(const PGyroStruct pGyro, const uint8_t addr )
 
 static void gyro_update(PGyroStruct pGyro)
 {
-    float angle_raw = (float)(gyro_get_raw_vel(pGyro)) * pGyro->psc + pGyro->offset;
-  float angle_vel;
+  float angle_raw = (float)(gyro_get_raw_vel(pGyro)) * pGyro->psc + pGyro->offset;
 
-  angle_vel = lpfilter_apply(pGyro->lpf, angle_raw);
+  float angle_vel = angle_raw;
   float angle = angle_vel * (GYRO_UPDATE_PERIOD_US / 1000000.0f);
 
   pGyro->angle += angle;
@@ -90,7 +89,7 @@ static void gyro_update(PGyroStruct pGyro)
 
 void set_angle(PGyroStruct pGyro, const float angle )
 {
-    pGyro->angle = angle ;
+  pGyro->angle = angle ;
 }
 
 float yaw_Kp = 1.5;
@@ -307,4 +306,3 @@ PGyroStruct gyro_init(void)
 
   return pGyro;
 }
-

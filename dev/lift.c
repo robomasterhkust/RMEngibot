@@ -71,10 +71,10 @@ static void lift_encoderUpdate(void)
       float speed_input = encoders[i].raw_speed*LIFT_SPEED_PSC;
 
       if((motors[i]._prev < 0.6f && pos_input > 5.68f) ||
-        (speed_input < -100.0f && pos_input > motors[i]._prev))
+        (speed_input < -80.0f && pos_input > motors[i]._prev))
         motors[i].rev--;
       if((motors[i]._prev > 5.68f && pos_input < 0.6f) ||
-        (speed_input > 100.0f && pos_input < motors[i]._prev))
+        (speed_input > 80.0f && pos_input < motors[i]._prev))
         motors[i].rev++;
 
       motors[i]._prev = pos_input;

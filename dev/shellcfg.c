@@ -86,7 +86,11 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
 {
   (void) argc,argv;
   PIMUStruct pIMU = imu_get();
+  PGyroStruct PGyro = gyro_get();
   chassisStruct* chassis = chassis_get();
+
+  chprintf(chp,"Gyro: %f\r\n",PGyro->angle_vel);
+  chprintf(chp,"Gyro: %f\r\n",PGyro->angle);
 
   chprintf(chp,"R1: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_NOSE));
   chprintf(chp,"R2: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL));

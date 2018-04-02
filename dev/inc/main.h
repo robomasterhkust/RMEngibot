@@ -24,6 +24,7 @@
 #include "gimbal.h"
 #include "chassis.h"
 #include "lift.h"
+#include "island.h"
 
 #include "exti.h"
 #include "imu_temp.h"

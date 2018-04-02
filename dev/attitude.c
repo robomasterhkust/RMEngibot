@@ -13,10 +13,11 @@
 
 static float _error_int[3] = {0.0f, 0.0f, 0.0f};
 
-uint8_t attitude_update(PIMUStruct pIMU)
+uint8_t attitude_update(PIMUStruct pIMU, PGyroStruct pGyro)
 {
   float corr[3] = {0.0f, 0.0f, 0.0f};
-  float spinRate = vector_norm(pIMU->gyroData, 3);
+  float angel_vel[3] = {pIMU->gyroData[X], pIMU->gyroData[Y], pGyro->angle_vel};
+  float spinRate = vector_norm(angel_vel, 3);
   float accel = vector_norm(pIMU->accelData, 3);
 
   vector_normalize(pIMU->qIMU, 4);
@@ -53,7 +54,7 @@ uint8_t attitude_update(PIMUStruct pIMU)
   }
 
   for (i = 0; i < 3; i++)
-    corr[i] += pIMU->gyroData[i] + _error_int[i];
+    corr[i] += angel_vel[i] + _error_int[i];
 
   float dq[4];
   q_derivative(pIMU->qIMU, corr, dq);
@@ -69,11 +70,24 @@ uint8_t attitude_update(PIMUStruct pIMU)
       pIMU->qIMU[i] = q[i];
 
     #ifdef  IMU_USE_EULER_ANGLE
-      quarternion2euler(pIMU->qIMU, pIMU->euler_angle);
+      float euler_angle[3];
+      quarternion2euler(pIMU->qIMU, euler_angle);
+
+      if(euler_angle[Yaw] < -2.0f && pIMU->prev_yaw > 2.0f)
+        pIMU->rev++;
+      else if(euler_angle[Yaw] > 2.0f && pIMU->prev_yaw < -2.0f)
+        pIMU->rev--;
+
+      pIMU->euler_angle[Roll] = euler_angle[Roll];
+      pIMU->euler_angle[Pitch] = euler_angle[Pitch];
+      pIMU->euler_angle[Yaw] = pIMU->rev*2*M_PI + euler_angle[Yaw];
+
       pIMU->d_euler_angle[Pitch] = cosf(pIMU->euler_angle[Roll])*pIMU->gyroData[Y] -
-        sinf(pIMU->euler_angle[Roll]) * pIMU->gyroData[Z];
+        sinf(pIMU->euler_angle[Roll]) * pGyro->angle_vel;
       pIMU->d_euler_angle[Yaw] = (sinf(pIMU->euler_angle[Roll])*pIMU->gyroData[Y] +
-        cosf(pIMU->euler_angle[Roll]) * pIMU->gyroData[Z]) / cosf(pIMU->euler_angle[Pitch]);
+        cosf(pIMU->euler_angle[Roll]) * pGyro->angle_vel) / cosf(pIMU->euler_angle[Pitch]);
+
+      pIMU->prev_yaw = euler_angle[Yaw];
     #endif
 
     return IMU_OK;
