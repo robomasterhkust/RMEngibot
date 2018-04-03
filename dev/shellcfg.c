@@ -89,15 +89,15 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   PGyroStruct PGyro = gyro_get();
   chassisStruct* chassis = chassis_get();
 
-  chprintf(chp,"Gyro: %f\r\n",PGyro->angle_vel);
-  chprintf(chp,"Gyro: %f\r\n",PGyro->angle);
+  chprintf(chp, "Roll: %f\r\n", pIMU->euler_angle[Roll]);
+  chprintf(chp, "Pitch: %f\r\n", pIMU->euler_angle[Pitch]);
+  chprintf(chp, "Yaw: %f\r\n", pIMU->euler_angle[Yaw]);
 
   chprintf(chp,"R1: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_NOSE));
   chprintf(chp,"R2: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL));
   chprintf(chp,"R3: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_DOGBALL));
   chprintf(chp,"R4: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_BUM));
   chprintf(chp,"R5: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_BUM));
-  chprintf(chp,"Pitch: %f\r\n",  pIMU->euler_angle[Pitch]);
   chprintf(chp,"State: %x\r\n",  chassis->state);
 }
 

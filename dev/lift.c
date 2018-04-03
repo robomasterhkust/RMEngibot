@@ -259,8 +259,6 @@ static const FRLName = "FR_lift";
 static const FLLName = "FL_lift";
 static const BLLName = "BL_lift";
 static const BRLName = "BR_lift";
-static const weightName = "lift weight";
-static const weightSubName = "1";
 
 #define LIFT_ERROR_INT_MAX  30000
 void lift_init(void)
@@ -283,7 +281,6 @@ void lift_init(void)
   params_set(&controllers[1], 14,3,BRLName,subname_PID,PARAM_PUBLIC);
   params_set(&controllers[2], 15,3,FRLName,subname_PID,PARAM_PUBLIC);
   params_set(&controllers[3], 16,3,FLLName,subname_PID,PARAM_PUBLIC);
-  params_set(&weight, 17,1,weightName,weightSubName,PARAM_PUBLIC);
 
   chThdCreateStatic(lift_control_wa, sizeof(lift_control_wa),
                           NORMALPRIO, lift_control, NULL);

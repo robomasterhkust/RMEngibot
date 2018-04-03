@@ -3,8 +3,8 @@
 
 #define PARAMS_VERSION "1.3.01"
 
-//#define PARAMS_USE_UART
-#define PARAMS_USE_USB
+#define PARAMS_USE_UART
+//#define PARAMS_USE_USB
 
 #if (defined(PARAMS_USE_UART) && defined(PARAMS_USE_USB)) || \
  (!defined(PARAMS_USE_UART) && (!defined(PARAMS_USE_USB)))

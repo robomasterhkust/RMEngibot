@@ -16,16 +16,15 @@
 
 #define CHASSIS_UPDATE_FREQ 500
 #define CHASSIS_UPDATE_PERIOD_US 1000000/CHASSIS_UPDATE_FREQ
+#define CHASSIS_HEADING_CONTROL
 
 // DBUS MACRO
 
 #define CURRENT_MAX    ((int16_t) 277)              //
 #define CURRENT_MIN    ((int16_t)-277)              //
+#define HEADING_MAX    6.0f
+#define HEADING_MIN    -6.0f
 #define CHASSIS_GEAR_RATIO    27U
-
-#define HEADING_MIN     ((float) -3.14159) // - pi
-#define HEADING_MAX     ((float) 3.14159)   // pi
-#define HEADING_SCALE   ((uint16_t) 100)
 
 #define ABS(x)     ( ((x) > 0) ? (x) : (-(x)) ) //return abs value of x
 
@@ -45,6 +44,7 @@ typedef enum {
   CHASSIS_AUTO_DRIVE     = 4,
   CHASSIS_AUTO_HEADING   = 8,
   CHASSIS_AUTO           = 14,
+  CHASSIS_HEADING_LOCK   = 16,
   CHASSIS_ERROR          = 32
 } chassis_state_t;
 
@@ -96,6 +96,8 @@ typedef struct{
 // MATH definition
 
 void chassis_killAutoDriver(void);
+void chassis_setRCScaler(const float scaler);
+void chassis_headingLock(const uint8_t cmd);
 void chassis_autoCmd(const uint8_t dir, const float cmd);
 
 chassisStruct* chassis_get(void);

@@ -50,6 +50,11 @@ static inline float boundOutput(const float input, const float max)
 // MATH function
 static inline float mapInput(float x, float in_min, float in_max, float out_min, float out_max)
 {
+  if(x >= in_max)
+    return in_max;
+  else if(x <= in_min)
+    return in_min;
+
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 

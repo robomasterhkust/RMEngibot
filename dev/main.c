@@ -57,7 +57,7 @@ static THD_FUNCTION(Attitude_thread, p)
     imuGetData(pIMU);
     ist8310_update();
 
-    attitude_update(pIMU pGyro);
+    attitude_update(pIMU, pGyro);
 
     if(pIMU->accelerometer_not_calibrated || pIMU->gyroscope_not_calibrated)
     {
@@ -92,7 +92,7 @@ int main(void) {
   can_processInit();
   RC_init();
 
-  extiinit(); //*
+//  extiinit(); //*
   tempControllerInit(); //*
   chassis_init();
   pGyro = gyro_init();
@@ -106,6 +106,7 @@ int main(void) {
 
   while (true)
   {
+    chassis_autoCmd(CHASSIS_HEADING, pIMU->euler_angle[Yaw]);
     chThdSleepSeconds(10);
   }
 

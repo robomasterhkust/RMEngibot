@@ -126,6 +126,8 @@ typedef struct tagIMUStruct {
   #ifdef  IMU_USE_EULER_ANGLE
     float euler_angle[3];      /* Euler angle of the IMU. */
     float d_euler_angle[3];    /* Euler angle changing rate of the IMU. */
+    int rev;
+    float prev_yaw;         /* used to detect zero-crossing */
   #else
     float dqIMU[4];         /* Attitude quaternion changing rate of the IMU. */
   #endif

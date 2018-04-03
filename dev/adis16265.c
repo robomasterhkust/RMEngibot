@@ -76,12 +76,12 @@ static uint16_t gyro_read(const PGyroStruct pGyro, const uint8_t addr )
     return address;
 }
 
-static void gyro_update(PGyroStruct pGyro)
+static void gyro_update(PGyroStruct pGyro, const float dt)
 {
   float angle_raw = (float)(gyro_get_raw_vel(pGyro)) * pGyro->psc + pGyro->offset;
 
   float angle_vel = angle_raw;
-  float angle = angle_vel * (GYRO_UPDATE_PERIOD_US / 1000000.0f);
+  float angle = angle_vel * dt;//(GYRO_UPDATE_PERIOD_US / 1000000.0f);
 
   pGyro->angle += angle;
   pGyro->angle_vel = angle_vel;
@@ -221,7 +221,9 @@ static THD_FUNCTION(gyro_thread,p)
   PGyroStruct pGyro = (PGyroStruct)p;
   chRegSetThreadName("External Yaw Gyro");
 
-  uint32_t tick = chVTGetSystemTimeX();
+  systime_t tick = chVTGetSystemTimeX();
+  systime_t last_update = chVTGetSystemTimeX();
+  float dt;
   while(true)
   {
     tick += GYRO_UPDATE_PERIOD;
@@ -232,8 +234,10 @@ static THD_FUNCTION(gyro_thread,p)
       tick = chVTGetSystemTimeX();
     }
 
+    dt = ST2US(chVTGetSystemTimeX()- last_update)/1e6;
+    last_update = chVTGetSystemTimeX();
     if(pGyro->state == INITED)
-      gyro_update(pGyro);
+      gyro_update(pGyro, dt);
 
     if(pGyro->adis_gyroscope_not_calibrated)
         {

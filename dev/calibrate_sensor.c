@@ -463,12 +463,7 @@ uint8_t gyro_cal(PGyroStruct pGyro, const uint8_t full_cal)
   chprintf(chp,"Calibration complete\r\n");
   pGyro->adis_gyroscope_not_calibrated = false;
   pGyro->offset += gyro_zero;
-//  flashSectorErase(flashSectorAt(GYRO_CAL_FLASH));
-//  flashWrite(GYRO_CAL_FLASH, &(pGyro->offset),4);
-
-//  float test;
-//  flashRead(GYRO_CAL_FLASH, &test,4);
-    chprintf(chp,"gyro_offset: %f\r\n",  pGyro->offset ); //* 180.0f/M_PI
+  chprintf(chp,"gyro_offset: %f\r\n",  pGyro->offset ); //* 180.0f/M_PI
 
 	pGyro->state = INITED;
   return 0;
