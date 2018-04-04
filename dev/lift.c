@@ -96,7 +96,7 @@ static void lift_encoderUpdate(void)
       }
     }
 
-    if((motors[i].pos_sp - motors[i]._pos) < 1.0f && (motors[i].pos_sp - motors[i]._pos) > -1.0f)
+    if((motors[i].pos_sp - motors[i]._pos) < M_PI && (motors[i].pos_sp - motors[i]._pos) > -M_PI)
       motors[i].in_position++;
     else
       motors[i].in_position = 0;

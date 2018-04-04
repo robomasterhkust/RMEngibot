@@ -24,6 +24,8 @@
 #define CURRENT_MIN    ((int16_t)-277)              //
 #define HEADING_MAX    6.0f
 #define HEADING_MIN    -6.0f
+#define HEADING_MAX_AUTO    2.0f
+#define HEADING_MIN_AUTO    -2.0f
 #define CHASSIS_GEAR_RATIO    27U
 
 #define ABS(x)     ( ((x) > 0) ? (x) : (-(x)) ) //return abs value of x

@@ -51,7 +51,7 @@ void chassis_headingLock(const uint8_t cmd)
 {
   if(cmd == DISABLE)
     chassis.state &= ~(CHASSIS_HEADING_LOCK);
-  else
+  else if(!(chassis.state & CHASSIS_HEADING_LOCK) && cmd != DISABLE)
   {
     chSysLock();
     chassis.state |= CHASSIS_HEADING_LOCK;
@@ -313,7 +313,7 @@ static THD_FUNCTION(chassis_control, p)
         if(chassis.state & CHASSIS_AUTO_HEADING)
           heading_sp = chassis.heading_cmd;
         else
-          heading_sp += heading_input * CHASSIS_UPDATE_PERIOD_US / 1e6;
+          heading_sp -= heading_input * CHASSIS_UPDATE_PERIOD_US / 1e6;
 
         float error = heading_sp - pIMU->euler_angle[Yaw];
 
@@ -326,6 +326,8 @@ static THD_FUNCTION(chassis_control, p)
         bound(&(heading_controller.error_int), heading_controller.error_int_max);
         heading_vel = heading_controller.kp * error + heading_controller.error_int -
                       heading_controller.kd * pIMU->d_euler_angle[Yaw];
+
+        bound(&heading_vel, HEADING_MAX_AUTO);
       }
       else
         heading_vel = heading_input;
@@ -366,12 +368,12 @@ void chassis_init(void)
   heading_controller.error_int_max = 1.8f;
   chassis.heading_cmd = CHASSIS_DISABLE_AUTO;
 
-/*
+
   chassis._pGyro = gyro_get();
   chassis._encoders = can_getChassisMotor();
   rc_scaler = 1.0f;
   chThdCreateStatic(chassis_control_wa, sizeof(chassis_control_wa),
                           NORMALPRIO, chassis_control, NULL);
-*/
+
   chassis.state = CHASSIS_RUNNING;
 }

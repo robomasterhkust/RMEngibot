@@ -21,7 +21,6 @@
 #include "calibrate_sensor.h"
 #include "rangefinder.h"
 
-#include "gimbal.h"
 #include "chassis.h"
 #include "lift.h"
 #include "island.h"

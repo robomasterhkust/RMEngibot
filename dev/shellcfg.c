@@ -73,8 +73,10 @@ static THD_FUNCTION(matlab_thread, p)
     }
 
     txbuf_f[0] = PIMU->euler_angle[Roll];
+    txbuf_f[1] = PIMU->euler_angle[Pitch];
+    txbuf_f[2] = PIMU->euler_angle[Yaw];
 
-    transmit_matlab(chp, NULL, txbuf_f, 0, 1);
+    transmit_matlab(chp, NULL, txbuf_f, 0, 3);
   }
 }
 
@@ -88,6 +90,10 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   PIMUStruct pIMU = imu_get();
   PGyroStruct PGyro = gyro_get();
   chassisStruct* chassis = chassis_get();
+
+  chprintf(chp, "AccelX: %f\r\n", pIMU->accelData[X]);
+  chprintf(chp, "AccelY: %f\r\n", pIMU->accelData[Y]);
+  chprintf(chp, "AccelZ: %f\r\n", pIMU->accelData[Z]);
 
   chprintf(chp, "Roll: %f\r\n", pIMU->euler_angle[Roll]);
   chprintf(chp, "Pitch: %f\r\n", pIMU->euler_angle[Pitch]);

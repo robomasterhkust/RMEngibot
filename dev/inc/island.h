@@ -34,7 +34,7 @@ typedef enum {
 #define DOG_RELAX() (PN2_OFF())
 
 #define ISLAND_UPDATE_PERIOD_MS 5
-//#define ISLAND_AUTO_DRIVE
+#define ISLAND_AUTO_DRIVE
 
 void island_init(void);
 

@@ -7,6 +7,7 @@
 
 #define FLT_EPSILON        1.1920929e-07F
 #define M_PI_2_F    (float)(M_PI/2)
+#define DEG2RAD(x)  (x * 0.0174533f)
 
 /**
  * @source pixhawk/src/lib/mathlib/math/filter/LowPassFilter2p.cpp

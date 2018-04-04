@@ -16,14 +16,6 @@
 #include "main.h"
 
 static BaseSequentialStream* chp = (BaseSequentialStream*)&SDU1;
-static const IMUConfigStruct imu1_conf =
-  {&SPID5, MPU6500_ACCEL_SCALE_8G, MPU6500_GYRO_SCALE_250, MPU6500_AXIS_REV_X|MPU6500_AXIS_REV_Y};
-
-static const magConfigStruct mag1_conf =
-  {IST8310_ADDR_FLOATING, 200, IST8310_AXIS_REV_NO};
-
-PIMUStruct pIMU;
-PGyroStruct pGyro;
 
 #define MPU6500_UPDATE_PERIOD_US 1000000U/MPU6500_UPDATE_FREQ
 static THD_WORKING_AREA(Attitude_thread_wa, 4096);
@@ -33,12 +25,27 @@ static THD_FUNCTION(Attitude_thread, p)
 
   (void)p;
 
-  pIMU = imu_get(); //*
+  PIMUStruct pIMU = imu_get();
+  PGyroStruct pGyro = gyro_get();
 
+  static const IMUConfigStruct imu1_conf =
+    {&SPID5, MPU6500_ACCEL_SCALE_8G, MPU6500_GYRO_SCALE_1000,
+      MPU6500_AXIS_REV_X|MPU6500_AXIS_REV_Y};
   imuInit(pIMU, &imu1_conf);
-  ist8310_init(&mag1_conf);
+  imuGetData(pIMU);
 
-  chThdSleepSeconds(3);
+  if(pIMU->temperature > 0.0f)
+    tempControllerInit();
+  else
+    pIMU->errorCode |= IMU_TEMP_ERROR;
+
+  while(pIMU->temperature < 60.0f)
+  {
+    imuGetData(pIMU);
+    chThdSleepMilliseconds(50);
+  }
+
+  pIMU->state = IMU_STATE_READY;
   attitude_imu_init(pIMU);
 
   uint32_t tick = chVTGetSystemTimeX();
@@ -55,8 +62,6 @@ static THD_FUNCTION(Attitude_thread, p)
     }
 
     imuGetData(pIMU);
-    ist8310_update();
-
     attitude_update(pIMU, pGyro);
 
     if(pIMU->accelerometer_not_calibrated || pIMU->gyroscope_not_calibrated)
@@ -93,12 +98,11 @@ int main(void) {
   RC_init();
 
 //  extiinit(); //*
-  tempControllerInit(); //*
+
   chassis_init();
-  pGyro = gyro_init();
+  gyro_init();
   rangeFinder_init();
 
-  sdlog_init();
   lift_init();
 
   attitude_init(); //*
@@ -106,7 +110,6 @@ int main(void) {
 
   while (true)
   {
-    chassis_autoCmd(CHASSIS_HEADING, pIMU->euler_angle[Yaw]);
     chThdSleepSeconds(10);
   }
 
