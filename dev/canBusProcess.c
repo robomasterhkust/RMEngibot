@@ -95,17 +95,23 @@ static void can_processEncoderMessage(CANDriver* const canp, const CANRxFrame* c
   {
     switch(rxmsg->SID)
     {
-        case CAN_CHASSIS_FL_FEEDBACK_MSG_ID:
+        case CAN_LIFT_FL_FEEDBACK_MSG_ID:
           can_processChassisEncoder(&extra_encoder[FRONT_LEFT] ,rxmsg);
           break;
-        case CAN_CHASSIS_FR_FEEDBACK_MSG_ID:
+        case CAN_LIFT_FR_FEEDBACK_MSG_ID:
           can_processChassisEncoder(&extra_encoder[FRONT_RIGHT] ,rxmsg);
           break;
-        case CAN_CHASSIS_BL_FEEDBACK_MSG_ID:
+        case CAN_LIFT_BL_FEEDBACK_MSG_ID:
           can_processChassisEncoder(&extra_encoder[BACK_LEFT] ,rxmsg);
           break;
-        case CAN_CHASSIS_BR_FEEDBACK_MSG_ID:
+        case CAN_LIFT_BR_FEEDBACK_MSG_ID:
           can_processChassisEncoder(&extra_encoder[BACK_RIGHT] ,rxmsg);
+          break;
+        case CAN_GRIPPER_ARM_FEEDBACK_MSG_ID:
+          can_processChassisEncoder(&extra_encoder[4] ,rxmsg);
+          break;
+        case CAN_GRIPPER_HAND_FEEDBACK_MSG_ID:
+          can_processChassisEncoder(&extra_encoder[5] ,rxmsg);
           break;
     }
   }

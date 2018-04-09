@@ -91,7 +91,7 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   PGyroStruct PGyro = gyro_get();
   chassisStruct* chassis = chassis_get();
 
-  chprintf(chp, "AccelX: %f\r\n", pIMU->accelData[X]);
+  chprintf(chp, "AccelX: %f\r565\n", pIMU->accelData[X]);
   chprintf(chp, "AccelY: %f\r\n", pIMU->accelData[Y]);
   chprintf(chp, "AccelZ: %f\r\n", pIMU->accelData[Z]);
 
@@ -105,6 +105,9 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   chprintf(chp,"R4: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_BUM));
   chprintf(chp,"R5: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_BUM));
   chprintf(chp,"State: %x\r\n",  chassis->state);
+
+  chprintf(chp, "ChassisError: %x\r\n", chassis_getError());
+  chprintf(chp, "LiftError: %x\r\n", lift_getError());
 }
 
 void cmd_drive(BaseSequentialStream * chp, int argc, char *argv[])

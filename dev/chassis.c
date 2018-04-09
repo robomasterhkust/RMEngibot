@@ -67,6 +67,14 @@ void chassis_setRCScaler(const float scaler)
   new_scaler = scaler;
 }
 
+void chassis_tempSuspend(const uint8_t cmd)
+{
+  if(cmd == DISABLE)
+    chassis.state &= ~(CHASSIS_SUSPEND);
+  else
+    chassis.state |= CHASSIS_SUSPEND;
+}
+
 static void chassis_kill(void)
 {
   LEDY_ON();
@@ -79,6 +87,8 @@ static void chassis_kill(void)
 
 // Set dead-zone to 6% range to provide smoother control
 #define THRESHOLD (RC_CH_VALUE_MAX - RC_CH_VALUE_MIN)*3/100
+#define RC_CHASSIS_MOUSE_SCALER 22
+#define RC_CHASSIS_KEYBOARD_SCALER  440
 static void chassis_inputCmd(void)
 {
   int16_t RX_X2 = pRC->rc.channel0 ,
@@ -92,9 +102,14 @@ static void chassis_inputCmd(void)
   if(ABS(RX_X1 - RC_CH_VALUE_OFFSET) < THRESHOLD)
     RX_X1 = RC_CH_VALUE_OFFSET;
 
-  strafe_rc = (int16_t)((float)(RX_X2 - RC_CH_VALUE_OFFSET) * rc_scaler);
-  drive_rc = (int16_t)((float)(RX_Y1 - RC_CH_VALUE_OFFSET) * rc_scaler);
-  heading_rc = (int16_t)((float)(RX_X1 - RC_CH_VALUE_OFFSET) * rc_scaler);
+  strafe_rc = (int16_t)(RX_X2 - RC_CH_VALUE_OFFSET +
+    ((pRC->keyboard.key_code & KEY_D) - (pRC->keyboard.key_code & KEY_A))
+    * RC_CHASSIS_KEYBOARD_SCALER * (pRC->keyboard.key_code & KEY_SHIFT ? 1.33f : 1.0f) * rc_scaler);
+  drive_rc = (int16_t)(RX_Y1 - RC_CH_VALUE_OFFSET +
+    ((pRC->keyboard.key_code & KEY_W) - (pRC->keyboard.key_code & KEY_S))
+    * RC_CHASSIS_KEYBOARD_SCALER * (pRC->keyboard.key_code & KEY_SHIFT ? 1.33f : 1.0f) * rc_scaler);
+  heading_rc = (int16_t)(RX_X1 - RC_CH_VALUE_OFFSET +
+    pRC->mouse.x * RC_CHASSIS_MOUSE_SCALER * rc_scaler);
 
   if(!strafe_rc && !drive_rc && !heading_rc)
     rc_scaler = new_scaler;
@@ -123,6 +138,7 @@ static void chassis_encoderUpdate(void)
       chassis._motors[i]._wait_count++;
       if(chassis._motors[i]._wait_count > CHASSIS_CONNECTION_ERROR_COUNT)
       {
+        LEDY_ON();
         chassis_kill();
 
         chassis.errorFlag |= CHASSIS0_NOT_CONNECTED << i;
@@ -145,6 +161,11 @@ static int16_t chassis_controlSpeed(const motorStruct* motor, pi_controller_t* c
 }
 
 #define HEADING_PSC CURRENT_MAX/HEADING_MAX
+
+#ifdef CHASSIS_POWER_LIMIT
+  #define TOTAL_OUTPUT_MAX 60000.0f
+#endif
+
 static void drive_kinematics(const float strafe_vel, const float drive_vel, const float heading_vel)
 {
   chassis._motors[FRONT_RIGHT].speed_sp =
@@ -158,11 +179,37 @@ static void drive_kinematics(const float strafe_vel, const float drive_vel, cons
 
   uint8_t i;
   int16_t output[4];
-  for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
-    output[i] = chassis_controlSpeed(&chassis._motors[i], &motor_vel_controllers[i]);
 
-  can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID,
-    		output[FRONT_RIGHT], output[BACK_RIGHT], output[FRONT_LEFT], output[BACK_LEFT]); //FL,FR,BR,BL
+  #ifdef CHASSIS_POWER_LIMIT
+    float total_output = 0;
+  #endif
+
+  if(chassis.state & CHASSIS_SUSPEND)
+    can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID, 0, 0, 0, 0); //FL,FR,BR,BL
+  else
+  {
+    for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
+    {
+      output[i] = chassis_controlSpeed(&chassis._motors[i], &motor_vel_controllers[i]);
+      #ifdef CHASSIS_POWER_LIMIT
+        total_output += ABS(output[i]);
+      #endif
+    }
+
+    #ifdef CHASSIS_POWER_LIMIT
+      float output_psc;
+      if(total_output < TOTAL_OUTPUT_MAX)
+        output_psc = 1.0f;
+      else
+        output_psc = TOTAL_OUTPUT_MAX / total_output;
+
+      for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
+        output[i] *= output_psc;
+    #endif
+
+    can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID,
+      		output[FRONT_RIGHT], output[BACK_RIGHT], output[FRONT_LEFT], output[BACK_LEFT]); //FL,FR,BR,BL
+  }
 }
 
 /*

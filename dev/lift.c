@@ -13,15 +13,15 @@ static lift_state_t lift_state = 0;
 static lift_error_t lift_error = 0;
 
 static ChassisEncoder_canStruct* encoders;
-static volatile motorPosStruct motors[EXTRA_MOTOR_NUM];
-static float offset[EXTRA_MOTOR_NUM];
-static lpfilterStruct lp_speed[EXTRA_MOTOR_NUM];
+static volatile motorPosStruct motors[4];
+static float offset[4];
+static lpfilterStruct lp_speed[4];
 
 static param_t weight;
-static uint8_t transition[EXTRA_MOTOR_NUM] = {0,0,0,0};
-static uint8_t on_foot[EXTRA_MOTOR_NUM] = {0,0,0,0};
+static uint8_t transition[4] = {0,0,0,0};
+static uint8_t on_foot[4] = {0,0,0,0};
 
-static pid_controller_t controllers[EXTRA_MOTOR_NUM];
+static pid_controller_t controllers[4];
 
 motorPosStruct* lift_get(void)
 {
@@ -46,21 +46,21 @@ bool lift_inPosition(void)
 #define   LIFT_ANGLE_PSC 7.6699e-4 //2*M_PI/0x1FFF
 #define   LIFT_SPEED_PSC 1.0f/((float)LIFT_GEAR_RATIO)
 
-static void lift_kill(void)
+void lift_kill(void)
 {
   LEDY_ON();
 
   if(lift_state == LIFT_RUNNING)
   {
     lift_state = LIFT_ERROR;
-    can_motorSetCurrent(LIFT_CAN, CHASSIS_CAN_EID, 0, 0, 0, 0);
+    can_motorSetCurrent(LIFT_CAN, LIFT_CAN_EID, 0, 0, 0, 0);
   }
 }
 
 static void lift_encoderUpdate(void)
 {
   uint8_t i;
-  for (i = 0; i < EXTRA_MOTOR_NUM; i++)
+  for (i = 0; i < 4U; i++)
   {
     if(encoders[i].updated)
     {
@@ -230,7 +230,7 @@ static THD_FUNCTION(lift_control, p)
 
     uint8_t i;
 
-    for (i = 0; i < EXTRA_MOTOR_NUM; i++)
+    for (i = 0; i < 4; i++)
     {
       if(fabsf(motors[i].pos_sp) > ONFOOT_TRANSITION_TH && on_foot[i] < ONFOOT_TRANSITION_PERIOD)
         transition[i] = LIFT_GOING_UP;
@@ -250,7 +250,7 @@ static THD_FUNCTION(lift_control, p)
       output[i] = lift_controlPos(&motors[i], &controllers[i], on_foot[i]);
 
     if(lift_state == LIFT_RUNNING)
-      can_motorSetCurrent(LIFT_CAN, CHASSIS_CAN_EID,
+      can_motorSetCurrent(LIFT_CAN, LIFT_CAN_EID,
         	output[3], output[2], output[1], output[0]);
   }
 }
@@ -263,10 +263,10 @@ static const BRLName = "BR_lift";
 #define LIFT_ERROR_INT_MAX  30000
 void lift_init(void)
 {
-  memset(&motors, 0, sizeof(motorPosStruct)*EXTRA_MOTOR_NUM);
+  memset(&motors, 0, sizeof(motorPosStruct)*4);
   encoders = can_getExtraMotor();
   uint8_t i;
-  for (i = 0; i < EXTRA_MOTOR_NUM; i++) {
+  for (i = 0; i < 4; i++) {
     lpfilter_init(lp_speed + i, LIFT_CONTROL_FREQ, 24);
     motors[i].speed_sp = 0.0f;
     motors[i]._speed = 0.0f;

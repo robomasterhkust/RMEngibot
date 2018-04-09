@@ -78,6 +78,15 @@ static THD_FUNCTION(Attitude_thread, p)
                           Attitude_thread, NULL))
 
 /*
+ * Watchdog deadline set to more than one second (LSI=40000 / (64 * 1000)).
+ */
+static const WDGConfig wdgcfg =
+{
+  STM32_IWDG_PR_64,
+  STM32_IWDG_RL(1000)
+};
+
+/*
  * Application entry point.
  */
 int main(void) {
@@ -92,26 +101,72 @@ int main(void) {
   halInit();
   chSysInit();
 
+  /* Init sequence 1: central controllers, loggers*/
   shellStart();
   params_init();
   can_processInit();
-  RC_init();
 
 //  extiinit(); //*
 
-  chassis_init();
+  /* Init sequence 2: sensors, comm*/
   gyro_init();
   rangeFinder_init();
+  attitude_init();
+  RC_init();
 
+  while(!power_check())
+  {
+    chThdSleepMilliseconds(100);
+  }
+
+  /* Init sequence 3: actuators, display*/
+  chassis_init();
   lift_init();
-
-  attitude_init(); //*
+  gripper_init();
   island_init();
+
+  wdgStart(&WDGD1, &wdgcfg); //Start the watchdog
 
   while (true)
   {
-    chThdSleepSeconds(10);
+    if(!power_failure())
+    {
+      wdgReset(&WDGD1);
+    }
+    else
+    {
+      lift_kill();
+    }
+
+    can_motorSetCurrent(&CAND1, 0x1FF, 10000, 4000,4000,4000);
+    chThdSleepMilliseconds(200);
   }
 
   return 0;
+}
+
+
+/**
+  *   @brief Check whether the 24V power is on
+  */
+bool power_check(void)
+{
+  ChassisEncoder_canStruct* can = can_getChassisMotor();
+
+  return can->updated;
+}
+
+/**
+  *   @brief  Monitor the case of a failure on 24V power, indicating the vehicle being killed
+  */
+bool power_failure(void)
+{
+  /*
+  uint32_t error = gimbal_get_error();
+
+  return error & (GIMBAL_PITCH_NOT_CONNECTED | GIMBAL_YAW_NOT_CONNECTED) ==
+    (GIMBAL_PITCH_NOT_CONNECTED | GIMBAL_YAW_NOT_CONNECTED);
+    */
+  return false
+  ;
 }

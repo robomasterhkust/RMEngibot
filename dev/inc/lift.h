@@ -4,6 +4,7 @@
 #include "chassis.h"
 
 #define LIFT_CAN   &CAND2
+#define LIFT_CAN_EID  0x1FF
 #define LIFT_GEAR_RATIO 27U
 #define LIFT_CONTROL_FREQ 500U
 
@@ -30,6 +31,7 @@ motorPosStruct* lift_get(void);
 lift_error_t lift_getError(void);
 bool lift_inPosition(void);
 void lift_init(void);
+void lift_kill(void);
 void lift_calibrate(void);
 
 #endif

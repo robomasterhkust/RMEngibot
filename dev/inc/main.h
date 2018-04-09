@@ -24,11 +24,15 @@
 #include "chassis.h"
 #include "lift.h"
 #include "island.h"
+#include "gripper.h"
 
 #include "exti.h"
 #include "imu_temp.h"
 #include "sdlog.h"
 
 void shellStart(void);
+
+bool power_check(void);
+bool power_failure(void);
 
 #endif

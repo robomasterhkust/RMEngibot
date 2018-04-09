@@ -666,7 +666,7 @@
                                      PIN_MODE_INPUT(GPIOD_PIN11) |          \
                                      PIN_MODE_ALTERNATE(GPIOD_TIM4_CH1) |          \
                                      PIN_MODE_ALTERNATE(GPIOD_TIM4_CH2) |          \
-                                     PIN_MODE_ALTERNATE(GPIOD_PNEUMATICS1) |          \
+                                     PIN_MODE_OUTPUT(GPIOD_PNEUMATICS1) |          \
                                      PIN_MODE_OUTPUT(GPIOD_PNEUMATICS2))
 #define VAL_GPIOD_OTYPER            (PIN_OTYPE_PUSHPULL(GPIOD_CAN1_RX) |       \
                                      PIN_OTYPE_PUSHPULL(GPIOD_CAN1_TX) |       \
@@ -730,7 +730,7 @@
                                      PIN_ODR_HIGH(GPIOD_PIN11) |            \
                                      PIN_ODR_HIGH(GPIOD_TIM4_CH1) |              \
                                      PIN_ODR_HIGH(GPIOD_TIM4_CH2) |              \
-                                     PIN_ODR_HIGH(GPIOD_PNEUMATICS1) |              \
+                                     PIN_ODR_LOW(GPIOD_PNEUMATICS1) |              \
                                      PIN_ODR_LOW(GPIOD_PNEUMATICS2))
 #define VAL_GPIOD_AFRL              (PIN_AFIO_AF(GPIOD_CAN1_RX, 9U) |          \
                                      PIN_AFIO_AF(GPIOD_CAN1_TX, 9U) |          \
@@ -746,7 +746,7 @@
                                      PIN_AFIO_AF(GPIOD_PIN11, 0U) |         \
                                      PIN_AFIO_AF(GPIOD_TIM4_CH1, 2U) |          \
                                      PIN_AFIO_AF(GPIOD_TIM4_CH2, 2U) |          \
-                                     PIN_AFIO_AF(GPIOD_PNEUMATICS1, 2U) |          \
+                                     PIN_AFIO_AF(GPIOD_PNEUMATICS1, 0U) |          \
                                      PIN_AFIO_AF(GPIOD_PNEUMATICS2, 0U))
 
 /*

@@ -17,6 +17,7 @@
 #define CHASSIS_UPDATE_FREQ 500
 #define CHASSIS_UPDATE_PERIOD_US 1000000/CHASSIS_UPDATE_FREQ
 #define CHASSIS_HEADING_CONTROL
+#define CHASSIS_POWER_LIMIT
 
 // DBUS MACRO
 
@@ -47,7 +48,8 @@ typedef enum {
   CHASSIS_AUTO_HEADING   = 8,
   CHASSIS_AUTO           = 14,
   CHASSIS_HEADING_LOCK   = 16,
-  CHASSIS_ERROR          = 32
+  CHASSIS_SUSPEND        = 32,
+  CHASSIS_ERROR          = 64
 } chassis_state_t;
 
 typedef enum {
@@ -98,6 +100,7 @@ typedef struct{
 // MATH definition
 
 void chassis_killAutoDriver(void);
+void chassis_tempSuspend(const uint8_t cmd);
 void chassis_setRCScaler(const float scaler);
 void chassis_headingLock(const uint8_t cmd);
 void chassis_autoCmd(const uint8_t dir, const float cmd);

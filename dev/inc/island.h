@@ -1,7 +1,7 @@
 #ifndef _ISLAND_H_
 #define _ISLAND_H_
 
-#define ROBOT_STATE_NUM  11U
+#define ROBOT_STATE_NUM  17U
 typedef enum {
   STATE_GROUND,
   STATE_ONFOOT,
@@ -12,8 +12,14 @@ typedef enum {
   STATE_CRAW,
   STATE_ISLAND_1,
   STATE_ISLAND_2,
+  STATE_ISLAND_3,
+  STATE_ISLAND_4,
+  STATE_ISLAND_5,
+  STATE_HERO_INTERACT_1,
+  STATE_HERO_INTERACT_2,
   STATE_RUSHDOWN_1,
-  STATE_RUSHDOWN_2
+  STATE_RUSHDOWN_2,
+  STATE_RUSHDOWN_3
 } robot_state_t;
 
 typedef enum {
@@ -33,9 +39,14 @@ typedef enum {
 #define DOG_ERECT() (PN2_ON())
 #define DOG_RELAX() (PN2_OFF())
 
+#define POUR_AMMO() (PN1_ON())
+#define CLOSE_LID() (PN1_OFF())
+
 #define ISLAND_UPDATE_PERIOD_MS 5
 #define ISLAND_AUTO_DRIVE
 
+island_state_t island_getState(void);
+robot_state_t island_getRobotState(void);
 void island_init(void);
 
 #endif

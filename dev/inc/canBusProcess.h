@@ -9,13 +9,19 @@
 
 #define GIMBAL_MOTOR_NUM  2U
 #define CHASSIS_MOTOR_NUM 4U
-#define EXTRA_MOTOR_NUM   4U
+#define EXTRA_MOTOR_NUM   6U
 
 /* CAN Bus 1 or 2 */
 #define CAN_CHASSIS_FL_FEEDBACK_MSG_ID              0x203
 #define CAN_CHASSIS_FR_FEEDBACK_MSG_ID              0x201
 #define CAN_CHASSIS_BL_FEEDBACK_MSG_ID              0x204
 #define CAN_CHASSIS_BR_FEEDBACK_MSG_ID              0x202
+#define CAN_GRIPPER_ARM_FEEDBACK_MSG_ID             0x201
+#define CAN_GRIPPER_HAND_FEEDBACK_MSG_ID            0x202
+#define CAN_LIFT_FL_FEEDBACK_MSG_ID                 0x207
+#define CAN_LIFT_FR_FEEDBACK_MSG_ID                 0x205
+#define CAN_LIFT_BL_FEEDBACK_MSG_ID                 0x208
+#define CAN_LIFT_BR_FEEDBACK_MSG_ID                 0x206
 #define CAN_GIMBAL_YAW_FEEDBACK_MSG_ID              0x205
 #define CAN_GIMBAL_PITCH_FEEDBACK_MSG_ID            0x206
 
