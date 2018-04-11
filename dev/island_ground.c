@@ -18,6 +18,7 @@ static float pos_cmd = 0.0f;
 static param_t pos_sp[7];
 static param_t threshold[7];
 static param_t gripper_pos_sp[6];
+static param_t hero_interact_pos_sp[2];
 
 static float start_yaw;
 static systime_t pour_ammo_time = 0;
@@ -111,7 +112,7 @@ static THD_FUNCTION(Island_thread, p)
     {
       case STATE_GROUND:
         DOG_RELAX();
-
+        CLOSE_LID();
         gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[4]); //swing back, open hand
 
         chassis_headingLockCmd(DISABLE);
@@ -126,6 +127,8 @@ static THD_FUNCTION(Island_thread, p)
           island_robotSetState(STATE_ONFOOT);
         else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
           island_robotSetState(STATE_RUSHDOWN_1);
+        else if(S2 == LOCK_MODE &&(s1_reset && island_ascend()))
+          island_robotSetState(STATE_HERO_INTERACT_1);
 
         break;
       case STATE_ONFOOT:
@@ -418,27 +421,32 @@ static THD_FUNCTION(Island_thread, p)
         break;
       case STATE_HERO_INTERACT_1:
         DOG_RELAX();
-
-        lift_changePos(pos_sp[4] - pos_cmd, pos_sp[4] - pos_cmd ,
-                    pos_sp[4] - pos_cmd, pos_sp[4] - pos_cmd);
+        CLOSE_LID();
+        lift_changePos(hero_interact_pos_sp[0] - pos_cmd, hero_interact_pos_sp[0] - pos_cmd ,
+                   hero_interact_pos_sp[0]- pos_cmd,hero_interact_pos_sp[0] - pos_cmd);
         if(lift_inPosition())
         {
-          POUR_AMMO();
-          hero_interact_time = chVTGetSystemTimeX();
-          island_robotSetState(STATE_GROUND);
+          if(S2 = LOCK_MODE && (s1_reset && island_ascend()))
+            island_robotSetState(STATE_HERO_INTERACT_2);
         }
+        break;
       case STATE_HERO_INTERACT_2:
-        DOG_RELAX();
-
-        lift_changePos(pos_sp[4] - pos_cmd, pos_sp[4] - pos_cmd ,
-                       pos_sp[4] - pos_cmd, pos_sp[4] - pos_cmd);
-        if(lift_inPosition() && s1_reset && island_ascend())
+        lift_changePos(hero_interact_pos_sp[0] - pos_cmd, hero_interact_pos_sp[0] - pos_cmd ,
+                   hero_interact_pos_sp[1]- pos_cmd,hero_interact_pos_sp[1] - pos_cmd);
+        if(lift_inPosition()){
+          if(S2 = LOCK_MODE && (s1_reset && island_ascend()))
+            island_robotSetState(STATE_HERO_INTERACT_3);
+        }
+        break;
+      case STATE_HERO_INTERACT_3:
+        POUR_AMMO();
+        hero_interact_time = chVTGetSystemTimeX();
+        if(S2 = LOCK_MODE && (s1_reset && island_ascend()))
         {
-          POUR_AMMO();
-          hero_interact_time = chVTGetSystemTimeX();
+          CLOSE_LID();
           island_robotSetState(STATE_GROUND);
         }
-
+        break;
       case STATE_RUSHDOWN_1:
         DOG_RELAX();
         lift_changePos(pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd ,
@@ -499,6 +507,9 @@ const char subNameTH[] = "Up_Pitch Dn_Pitch1 Dn_Pitch2 Dn_Pitch3 Up_RF1 Up_RF2 U
 static const char PosName[] = "Gripper Pos";
 static const char PosSubName[] = "ArmIni ArmOut ArmIn ArmUp Open Close";
 
+static const char PosInteractName[] = "Hero interact";
+static const char PosInteractSubName[] = "front back";
+
 void island_init(void)
 {
   pIMU = imu_get();
@@ -506,7 +517,7 @@ void island_init(void)
   params_set(pos_sp,18,7,namePos,subNamePos,PARAM_PUBLIC);
   params_set(threshold,19,7,nameTH,subNameTH,PARAM_PUBLIC);
   params_set(gripper_pos_sp, 22,6,PosName,PosSubName,PARAM_PUBLIC);
-
+  params_set(hero_interact_pos_sp,23,2,PosInteractName,PosInteractSubName,PARAM_PUBLIC);
   chThdCreateStatic(Island_thread_wa, sizeof(Island_thread_wa),
   NORMALPRIO + 5,
       Island_thread, NULL); //*

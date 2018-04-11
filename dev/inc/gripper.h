@@ -20,6 +20,12 @@ typedef enum {
   GRIPPER_ERROR
 } gripper_state_t;
 
+typedef enum {
+  GRIPPER_ARM_NOT_CONNECTED = 1 << 0,
+  GRIPPER_HAND_NOT_CONNECTED = 1 << 1,
+  GRIPPER_NOT_CONNECTED = 0x0000ffff
+} gripper_error_t;
+
 static const float gripper_gear_ratio[GRIPPER_MOTOR_NUM] = {27.0f, 36.0f};
 static const int16_t gripper_output_max[GRIPPER_MOTOR_NUM] = {15000, 16384};
 #include "chassis.h"

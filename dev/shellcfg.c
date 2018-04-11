@@ -108,6 +108,7 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
 
   chprintf(chp, "ChassisError: %x\r\n", chassis_getError());
   chprintf(chp, "LiftError: %x\r\n", lift_getError());
+  chprintf(chp, "Gripper Error:%x\r\n",gripper_getError());
 }
 
 void cmd_drive(BaseSequentialStream * chp, int argc, char *argv[])

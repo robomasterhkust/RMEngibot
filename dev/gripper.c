@@ -14,6 +14,8 @@ static bool in_position[GRIPPER_MOTOR_NUM] = {0 , 0};
 static pid_controller_t controllers[GRIPPER_MOTOR_NUM];
 static gripper_state_t gripper_state = GRIPPER_UNINIT;
 
+static gripper_error_t gripper_error = 0;
+
 motorPosStruct* gripper_get(void)
 {
   return motors;
@@ -22,7 +24,15 @@ motorPosStruct* gripper_get(void)
 void gripper_kill(void)
 {
   LEDY_ON();
+  gripper_state = GRIPPER_ERROR;
   can_motorSetCurrent(GRIPPER_CAN, GRIPPER_CAN_EID, 0, 0, 0, 0);
+}
+
+gripper_state_t gripper_getError(void)
+{
+  uint32_t errorFlag = gripper_error;
+  gripper_error = 0;
+  return errorFlag;
 }
 
 #define  GRIPPER_ANGLE_PSC 7.6699e-4 //2*M_PI/0x1FFF
@@ -68,6 +78,7 @@ static void gripper_encoderUpdate(void)
       if(motors[i]._wait_count > GRIPPER_CONNECTION_ERROR_COUNT)
       {
         motors[i]._wait_count = 1;
+        gripper_error |= GRIPPER_ARM_NOT_CONNECTED << i;
         gripper_kill();
       }
     }
@@ -142,7 +153,7 @@ static THD_FUNCTION(gripper_control, p)
     {
       if(gripper_state == GRIPPER_INITING)
       {
-        output_max[0] = 5000;
+        output_max[0] = 3500;
         output_max[1] = 3500;
       }
       else
