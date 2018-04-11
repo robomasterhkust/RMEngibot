@@ -4,6 +4,7 @@
 #define ROBOT_STATE_NUM  17U
 typedef enum {
   STATE_GROUND,
+  STATE_TEST,
   STATE_ONFOOT,
   STATE_ROLLER_IN,
   STATE_ROLLER_IN_2,
@@ -48,6 +49,7 @@ typedef enum {
 
 island_state_t island_getState(void);
 robot_state_t island_getRobotState(void);
+void island_robotSetState(robot_state_t state);
 void island_init(void);
 
 #endif

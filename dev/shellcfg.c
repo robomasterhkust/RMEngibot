@@ -6,7 +6,8 @@
 #include "main.h"
 #include "shell.h"
 #include <string.h>
-
+#include "rangefinder.h"
+#include "island.h"
 #define SERIAL_CMD       &SDU1
 #define SERIAL_DATA      &SDU1
 
@@ -80,6 +81,19 @@ static THD_FUNCTION(matlab_thread, p)
   }
 }
 
+void enable_all_rangefinder(){
+  island_robotSetState(STATE_TEST);
+  int i ;
+  for( i = 0 ; i < RANGEFINDER_NUM ; i++)
+    rangeFinder_control(i, ENABLE);
+}
+
+void disable_all_rangefinder(){
+  int i ;
+  for( i = 0 ; i < RANGEFINDER_NUM ; i++)
+    rangeFinder_control(i, DISABLE);
+  island_robotSetState(STATE_GROUND);
+}
 /*===========================================================================*/
 /* Definitions of shell command functions                                    */
 /*===========================================================================*/
@@ -99,16 +113,22 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   chprintf(chp, "Pitch: %f\r\n", pIMU->euler_angle[Pitch]);
   chprintf(chp, "Yaw: %f\r\n", pIMU->euler_angle[Yaw]);
 
-  chprintf(chp,"R1: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_NOSE));
-  chprintf(chp,"R2: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL));
-  chprintf(chp,"R3: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_DOGBALL));
-  chprintf(chp,"R4: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_BUM));
-  chprintf(chp,"R5: %f\r\n",  rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_BUM));
+
   chprintf(chp,"State: %x\r\n",  chassis->state);
 
   chprintf(chp, "ChassisError: %x\r\n", chassis_getError());
   chprintf(chp, "LiftError: %x\r\n", lift_getError());
   chprintf(chp, "Gripper Error:%x\r\n",gripper_getError());
+
+  enable_all_rangefinder();
+  chThdSleepMilliseconds(1000);
+  int j;
+  for (j = 0; j < RANGEFINDER_NUM; ++j)
+  {
+     chprintf(chp, "rangefinder %i:%f\r\n",j,rangeFinder_getDistance(j));
+  }
+  disable_all_rangefinder();
+
 }
 
 void cmd_drive(BaseSequentialStream * chp, int argc, char *argv[])
