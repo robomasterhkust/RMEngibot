@@ -17,12 +17,19 @@
 #define CHASSIS_UPDATE_FREQ 500
 #define CHASSIS_UPDATE_PERIOD_US 1000000/CHASSIS_UPDATE_FREQ
 #define CHASSIS_HEADING_CONTROL
-#define CHASSIS_POWER_LIMIT
+
+//#define CHASSIS_POWER_LIMIT
+//#define CHASSIS_USE_KEYBOARD
 
 // DBUS MACRO
 
-#define CURRENT_MAX    ((int16_t) 277)              //
-#define CURRENT_MIN    ((int16_t)-277)              //
+#ifdef CHASSIS_USE_KEYBOARD
+  #define RC_CHASSIS_MOUSE_SCALER 22
+  #define RC_CHASSIS_KEYBOARD_SCALER  440
+#endif
+
+#define VEL_MAX    ((int16_t) 277)              //
+#define VEL_MIN    ((int16_t)-277)              //
 #define HEADING_MAX    6.0f
 #define HEADING_MIN    -6.0f
 #define HEADING_MAX_AUTO    2.0f
@@ -101,8 +108,9 @@ typedef struct{
 
 void chassis_killAutoDriver(void);
 void chassis_tempSuspend(const uint8_t cmd);
-void chassis_setRCScaler(const float scaler);
-void chassis_headingLock(const uint8_t cmd);
+void chassis_setVelAcclLimit(const float speed_limit, const float accl_limit);
+void chassis_reverseCmd(const uint8_t cmd);
+void chassis_headingLockCmd(const uint8_t cmd);
 void chassis_autoCmd(const uint8_t dir, const float cmd);
 
 chassisStruct* chassis_get(void);
