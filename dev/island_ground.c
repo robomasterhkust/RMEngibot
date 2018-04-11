@@ -118,7 +118,7 @@ static THD_FUNCTION(Island_thread, p)
         CLOSE_LID();
         gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[4]); //swing back, open hand
 
-        chassis_headingLock(DISABLE);
+        chassis_headingLockCmd(DISABLE);
         chassis_killAutoDriver();
        
 
@@ -155,7 +155,7 @@ static THD_FUNCTION(Island_thread, p)
             start_yaw = pIMU->euler_angle[Yaw];
             island_robotSetState(STATE_ROLLER_IN);
             roller_in_start = chVTGetSystemTimeX();
-            chassis_headingLock(ENABLE);
+            chassis_headingLockCmd(ENABLE);
           }
           else if(
                   island_state == STATE_STAIR_1 &&
@@ -337,7 +337,7 @@ static THD_FUNCTION(Island_thread, p)
         break;
       case STATE_ISLAND_1:
         DOG_RELAX();
-        chassis_headingLock(DISABLE);
+        chassis_headingLockCmd(DISABLE);
         chassis_killAutoDriver();
         lift_changePos(pos_sp[4] - pos_cmd, pos_sp[4] - pos_cmd ,
                       pos_sp[4] - pos_cmd, pos_sp[4] - pos_cmd);

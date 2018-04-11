@@ -21,14 +21,8 @@ static PIMUStruct pIMU;
 
 //RC input of chassis controller
 static int16_t strafe_rc = 0.0f, drive_rc = 0.0f, heading_rc = 0.0f;
-
-/*
- * NOTE: After calling "chassis_setRCScaler(), the variable "rc_speed_scaler"
- *       is not changed immediately, it will be changes as soon as the RC input
- *       returns to zero, otherwise the vehicle may go berserk
- */
-static float rc_scaler; //Set from -1.0f to 1.0f to scale down maximum rc input
-static float new_scaler = 1.0f;
+static int8_t rc_reversed = 1; //-1: reverse, 0: kill, 1: no reverse
+static float speed_limit = 1.0f; //value from 0 ~ 1
 static float heading_sp;
 
 #define chassis_canUpdate()   \
@@ -47,7 +41,7 @@ uint32_t chassis_getError(void)
   return errorFlag;
 }
 
-void chassis_headingLock(const uint8_t cmd)
+void chassis_headingLockCmd(const uint8_t cmd)
 {
   if(cmd == DISABLE)
     chassis.state &= ~(CHASSIS_HEADING_LOCK);
@@ -85,10 +79,8 @@ static void chassis_kill(void)
   }
 }
 
-// Set dead-zone to 6% range to provide smoother control
-#define THRESHOLD (RC_CH_VALUE_MAX - RC_CH_VALUE_MIN)*3/100
-#define RC_CHASSIS_MOUSE_SCALER 22
-#define RC_CHASSIS_KEYBOARD_SCALER  440
+// Set dead-zone to 2% range to provide smoother control
+#define THRESHOLD (RC_CH_VALUE_MAX - RC_CH_VALUE_MIN)/100
 static void chassis_inputCmd(void)
 {
   int16_t RX_X2 = pRC->rc.channel0 ,
@@ -103,16 +95,25 @@ static void chassis_inputCmd(void)
     RX_X1 = RC_CH_VALUE_OFFSET;
 
   strafe_rc = (int16_t)(RX_X2 - RC_CH_VALUE_OFFSET +
-    ((pRC->keyboard.key_code & KEY_D) - (pRC->keyboard.key_code & KEY_A))
-    * RC_CHASSIS_KEYBOARD_SCALER * (pRC->keyboard.key_code & KEY_SHIFT ? 1.33f : 1.0f) * rc_scaler);
+      #ifdef CHASSIS_USE_KEYBOARD
+        ((pRC->keyboard.key_code & KEY_D) - (pRC->keyboard.key_code & KEY_A))
+        * RC_CHASSIS_KEYBOARD_SCALER * (pRC->keyboard.key_code & KEY_SHIFT ? 1.33f : 1.0f)
+      #endif
+    ) * rc_reversed;
   drive_rc = (int16_t)(RX_Y1 - RC_CH_VALUE_OFFSET +
-    ((pRC->keyboard.key_code & KEY_W) - (pRC->keyboard.key_code & KEY_S))
-    * RC_CHASSIS_KEYBOARD_SCALER * (pRC->keyboard.key_code & KEY_SHIFT ? 1.33f : 1.0f) * rc_scaler);
+      #ifdef CHASSIS_USE_KEYBOARD
+        ((pRC->keyboard.key_code & KEY_W) - (pRC->keyboard.key_code & KEY_S))
+        * RC_CHASSIS_KEYBOARD_SCALER * (pRC->keyboard.key_code & KEY_SHIFT ? 1.33f : 1.0f)
+      #endif
+    ) * rc_reversed;
   heading_rc = (int16_t)(RX_X1 - RC_CH_VALUE_OFFSET +
-    pRC->mouse.x * RC_CHASSIS_MOUSE_SCALER * rc_scaler);
+      #ifdef CHASSIS_USE_KEYBOARD
+        pRC->mouse.x * RC_CHASSIS_MOUSE_SCALER
+      #endif
+    ) * rc_reversed;
 
-  if(!strafe_rc && !drive_rc && !heading_rc)
-    rc_scaler = new_scaler;
+  bound(&strafe_rc, VEL_MAX * speed_limit);
+  bound(&drive_rc, VEL_MAX * speed_limit);
 }
 
 #define   CHASSIS_ANGLE_PSC 7.6699e-4 //2*M_PI/0x1FFF
@@ -160,7 +161,7 @@ static int16_t chassis_controlSpeed(const motorStruct* motor, pi_controller_t* c
   return (int16_t)(boundOutput(output,OUTPUT_MAX));
 }
 
-#define HEADING_PSC CURRENT_MAX/HEADING_MAX
+#define HEADING_PSC VEL_MAX/HEADING_MAX
 
 #ifdef CHASSIS_POWER_LIMIT
   #define TOTAL_OUTPUT_MAX 60000.0f
@@ -341,8 +342,8 @@ static THD_FUNCTION(chassis_control, p)
         heading_th = 100;
 
       //These are remote control commands, mapped to match min and max CURRENT
-      float strafe_input  = mapInput(strafe_rc, -660, 660, -CURRENT_MAX, CURRENT_MAX),
-            drive_input   = mapInput(drive_rc, -660, 660, -CURRENT_MAX, CURRENT_MAX),
+      float strafe_input  = mapInput(strafe_rc, -660, 660, -VEL_MAX, VEL_MAX),
+            drive_input   = mapInput(drive_rc, -660, 660, -VEL_MAX, VEL_MAX),
             heading_input = mapInput(heading_rc, -660, 660, -HEADING_MAX, HEADING_MAX);
 
       if(chassis.state & CHASSIS_AUTO_STRAFE)
@@ -418,7 +419,6 @@ void chassis_init(void)
 
   chassis._pGyro = gyro_get();
   chassis._encoders = can_getChassisMotor();
-  rc_scaler = 1.0f;
   chThdCreateStatic(chassis_control_wa, sizeof(chassis_control_wa),
                           NORMALPRIO, chassis_control, NULL);
 
