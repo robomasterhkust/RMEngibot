@@ -22,8 +22,8 @@ static PIMUStruct pIMU;
 //RC input of chassis controller
 static int16_t strafe_rc = 0.0f, drive_rc = 0.0f, heading_rc = 0.0f;
 static int8_t rc_reversed = 1; //-1: reverse, 0: kill, 1: no reverse
-static float speed_limit = 1.0f; //value from 0 ~ 1
-static float accl_limit = 1.0f; //value from 0 ~ 1
+static float rc_speed_limit = 1.0f; //value from 0 ~ 1
+static float rc_accl_limit = 1.0f; //value from 0 ~ 1
 static float heading_sp;
 
 #define chassis_canUpdate()   \
@@ -44,12 +44,12 @@ uint32_t chassis_getError(void)
 
 void chassis_setSpeedLimit(const float speed)
 {
-  speed_limit = speed;
+  rc_speed_limit = speed;
 }
 
 void chassis_setAcclLimit(const float accl)
 {
-  accl_limit = accl;
+  rc_accl_limit = accl;
 }
 
 void chassis_headingLockCmd(const uint8_t cmd)
@@ -116,8 +116,8 @@ static void chassis_inputCmd(void)
       #endif
     ) * rc_reversed;
 
-  bound(&strafe_rc, VEL_MAX * speed_limit);
-  bound(&drive_rc, VEL_MAX * speed_limit);
+  strafe_rc = boundOutput((float)strafe_rc, 660 * rc_speed_limit);
+  drive_rc = boundOutput((float)drive_rc, 660 * rc_speed_limit);
 }
 
 #define   CHASSIS_ANGLE_PSC 7.6699e-4 //2*M_PI/0x1FFF

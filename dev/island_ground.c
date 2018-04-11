@@ -119,9 +119,9 @@ static THD_FUNCTION(Island_thread, p)
         CLOSE_LID();
         gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[4]); //swing back, open hand
 
+        chassis_setSpeedLimit(1.0f);
         chassis_headingLockCmd(DISABLE);
         chassis_killAutoDriver();
-       
 
         lift_changePos(47.0f - pos_cmd, 47.0f - pos_cmd ,
                       47.0f - pos_cmd, 47.0f - pos_cmd);
@@ -150,6 +150,7 @@ static THD_FUNCTION(Island_thread, p)
         //Pos0: on_foot position setpoint
         lift_changePos(pos_sp[0] - pos_cmd, pos_sp[0] - pos_cmd ,
                       pos_sp[0] - pos_cmd, pos_sp[0] - pos_cmd);
+        chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_LOW);
 
         if(S2 == ASCEND_MODE)
         {
@@ -183,6 +184,7 @@ static THD_FUNCTION(Island_thread, p)
 
         lift_changePos(pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd ,
                       pos_sp[1] - pos_cmd, pos_sp[1] - pos_cmd);
+        chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_HIGH);
 
         #ifdef ISLAND_AUTO_DRIVE
           if(lift_inPosition())
@@ -294,6 +296,8 @@ static THD_FUNCTION(Island_thread, p)
             chassis_autoCmd(CHASSIS_DRIVE, -150.0f);
         #endif
 
+        chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_HIGH);
+
         if(island_state == STATE_STAIR_1 || island_state == STATE_STAIR_2)
         {
           rangeFinder_control(RANGEFINDER_INDEX_LEFT_BUM, ENABLE);
@@ -344,6 +348,7 @@ static THD_FUNCTION(Island_thread, p)
         chassis_killAutoDriver();
         lift_changePos(pos_sp[4] - pos_cmd, pos_sp[4] - pos_cmd ,
                       pos_sp[4] - pos_cmd, pos_sp[4] - pos_cmd);
+        chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_LOW);
 
         if(chVTGetSystemTimeX() - gripper_release_time > MS2ST(1000))
           gripper_changePos(gripper_pos_sp[3], gripper_pos_sp[4]); //strech up, open hand
@@ -429,6 +434,8 @@ static THD_FUNCTION(Island_thread, p)
         CLOSE_LID();
         lift_changePos(hero_interact_pos_sp[0] - pos_cmd, hero_interact_pos_sp[0] - pos_cmd ,
                    hero_interact_pos_sp[0]- pos_cmd,hero_interact_pos_sp[0] - pos_cmd);
+        chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_LOW);
+
         if(lift_inPosition())
         {
           if(S2 = LOCK_MODE && (s1_reset && island_ascend()))
@@ -456,6 +463,7 @@ static THD_FUNCTION(Island_thread, p)
         DOG_RELAX();
         lift_changePos(pos_sp[2] - pos_cmd, pos_sp[2] - pos_cmd ,
                     pos_sp[4] - pos_cmd, pos_sp[4] - pos_cmd);
+        chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_HIGH);
 
         if(lift_inPosition()
         && threshold_count(pIMU->euler_angle[Pitch] > threshold[1], 3, &count))
