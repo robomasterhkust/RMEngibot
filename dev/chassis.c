@@ -23,6 +23,7 @@ static PIMUStruct pIMU;
 static int16_t strafe_rc = 0.0f, drive_rc = 0.0f, heading_rc = 0.0f;
 static int8_t rc_reversed = 1; //-1: reverse, 0: kill, 1: no reverse
 static float speed_limit = 1.0f; //value from 0 ~ 1
+static float accl_limit = 1.0f; //value from 0 ~ 1
 static float heading_sp;
 
 #define chassis_canUpdate()   \
@@ -41,6 +42,16 @@ uint32_t chassis_getError(void)
   return errorFlag;
 }
 
+void chassis_setSpeedLimit(const float speed)
+{
+  speed_limit = speed;
+}
+
+void chassis_setAcclLimit(const float accl)
+{
+  accl_limit = accl;
+}
+
 void chassis_headingLockCmd(const uint8_t cmd)
 {
   if(cmd == DISABLE)
@@ -52,13 +63,6 @@ void chassis_headingLockCmd(const uint8_t cmd)
     heading_sp = pIMU->euler_angle[Yaw];
     chSysUnlock();
   }
-}
-
-void chassis_setRCScaler(const float scaler)
-{
-  if(scaler > 1.0f || scaler < -1.0f)
-    return;
-  new_scaler = scaler;
 }
 
 void chassis_tempSuspend(const uint8_t cmd)
@@ -94,21 +98,21 @@ static void chassis_inputCmd(void)
   if(ABS(RX_X1 - RC_CH_VALUE_OFFSET) < THRESHOLD)
     RX_X1 = RC_CH_VALUE_OFFSET;
 
-  strafe_rc = (int16_t)(RX_X2 - RC_CH_VALUE_OFFSET +
+  strafe_rc = (int16_t)(RX_X2 - RC_CH_VALUE_OFFSET
       #ifdef CHASSIS_USE_KEYBOARD
-        ((pRC->keyboard.key_code & KEY_D) - (pRC->keyboard.key_code & KEY_A))
+        +((pRC->keyboard.key_code & KEY_D) - (pRC->keyboard.key_code & KEY_A))
         * RC_CHASSIS_KEYBOARD_SCALER * (pRC->keyboard.key_code & KEY_SHIFT ? 1.33f : 1.0f)
       #endif
     ) * rc_reversed;
-  drive_rc = (int16_t)(RX_Y1 - RC_CH_VALUE_OFFSET +
+  drive_rc = (int16_t)(RX_Y1 - RC_CH_VALUE_OFFSET
       #ifdef CHASSIS_USE_KEYBOARD
-        ((pRC->keyboard.key_code & KEY_W) - (pRC->keyboard.key_code & KEY_S))
+        +((pRC->keyboard.key_code & KEY_W) - (pRC->keyboard.key_code & KEY_S))
         * RC_CHASSIS_KEYBOARD_SCALER * (pRC->keyboard.key_code & KEY_SHIFT ? 1.33f : 1.0f)
       #endif
     ) * rc_reversed;
-  heading_rc = (int16_t)(RX_X1 - RC_CH_VALUE_OFFSET +
+  heading_rc = (int16_t)(RX_X1 - RC_CH_VALUE_OFFSET
       #ifdef CHASSIS_USE_KEYBOARD
-        pRC->mouse.x * RC_CHASSIS_MOUSE_SCALER
+        +pRC->mouse.x * RC_CHASSIS_MOUSE_SCALER
       #endif
     ) * rc_reversed;
 
@@ -187,30 +191,40 @@ static void drive_kinematics(const float strafe_vel, const float drive_vel, cons
 
   if(chassis.state & CHASSIS_SUSPEND)
     can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID, 0, 0, 0, 0); //FL,FR,BR,BL
-  else
+
+  for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
   {
-    for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
-    {
-      output[i] = chassis_controlSpeed(&chassis._motors[i], &motor_vel_controllers[i]);
-      #ifdef CHASSIS_POWER_LIMIT
-        total_output += ABS(output[i]);
-      #endif
-    }
-
+    output[i] = chassis_controlSpeed(&chassis._motors[i], &motor_vel_controllers[i]);
     #ifdef CHASSIS_POWER_LIMIT
-      float output_psc;
-      if(total_output < TOTAL_OUTPUT_MAX)
-        output_psc = 1.0f;
-      else
-        output_psc = TOTAL_OUTPUT_MAX / total_output;
-
-      for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
-        output[i] *= output_psc;
+      total_output += ABS(output[i]);
     #endif
-
-    can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID,
-      		output[FRONT_RIGHT], output[BACK_RIGHT], output[FRONT_LEFT], output[BACK_LEFT]); //FL,FR,BR,BL
   }
+
+  if(chassis.state & CHASSIS_SUSPEND_R)
+  {
+    output[FRONT_RIGHT] = 0;
+    output[BACK_RIGHT] = 0;
+  }
+
+  if(chassis.state & CHASSIS_SUSPEND_L)
+  {
+    output[FRONT_LEFT] = 0;
+    output[BACK_LEFT] = 0;
+  }
+
+  #ifdef CHASSIS_POWER_LIMIT
+    float output_psc;
+    if(total_output < TOTAL_OUTPUT_MAX)
+      output_psc = 1.0f;
+    else
+      output_psc = TOTAL_OUTPUT_MAX / total_output;
+
+    for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
+      output[i] *= output_psc;
+  #endif
+
+  can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID,
+      	output[FRONT_RIGHT], output[BACK_RIGHT], output[FRONT_LEFT], output[BACK_LEFT]); //FL,FR,BR,BL
 }
 
 /*

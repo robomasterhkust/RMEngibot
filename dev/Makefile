@@ -127,7 +127,7 @@ CSRC = $(STARTUPSRC) \
        $(CHIBIOS)/os/various/syscalls.c \
 			 $(CHIBIOS)/os/hal/lib/streams/memstreams.c \
        $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
-       main.c shellcfg.c flash.c tft_display.c \
+       main.c shellcfg.c flash.c \
        mpu6500.c attitude.c ist8310.c math_misc.c \
        canBusProcess.c dbus.c params.c usbcfg.c \
        calibrate_sensor.c\
