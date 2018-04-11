@@ -125,7 +125,9 @@ static THD_FUNCTION(Island_thread, p)
                       47.0f - pos_cmd, 47.0f - pos_cmd);
 
         if(S2 == ASCEND_MODE && (s1_reset && island_ascend()))
+        {
           island_robotSetState(STATE_ONFOOT);
+        }
         else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
           island_robotSetState(STATE_RUSHDOWN_1);
         else if(S2 == LOCK_MODE &&(s1_reset && island_ascend()))
