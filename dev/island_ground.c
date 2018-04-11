@@ -35,7 +35,7 @@ robot_state_t island_getRobotState(void)
   return robot_state;
 }
 
-static void island_robotSetState(robot_state_t state)
+void island_robotSetState(robot_state_t state)
 {
   if(state < 0 || state > ROBOT_STATE_NUM)
     return;
@@ -111,14 +111,16 @@ static THD_FUNCTION(Island_thread, p)
     switch(robot_state)
     {
       case STATE_GROUND:
+        rangeFinder_control(RANGEFINDER_INDEX_LEFT_BUM,DISABLE);
+        rangeFinder_control(RANGEFINDER_INDEX_RIGHT_BUM,DISABLE);
+      case STATE_TEST:
         DOG_RELAX();
         CLOSE_LID();
         gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[4]); //swing back, open hand
 
         chassis_headingLock(DISABLE);
         chassis_killAutoDriver();
-        rangeFinder_control(RANGEFINDER_INDEX_LEFT_BUM,DISABLE);
-        rangeFinder_control(RANGEFINDER_INDEX_RIGHT_BUM,DISABLE);
+       
 
         lift_changePos(47.0f - pos_cmd, 47.0f - pos_cmd ,
                       47.0f - pos_cmd, 47.0f - pos_cmd);
