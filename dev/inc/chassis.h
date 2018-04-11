@@ -55,8 +55,10 @@ typedef enum {
   CHASSIS_AUTO_HEADING   = 8,
   CHASSIS_AUTO           = 14,
   CHASSIS_HEADING_LOCK   = 16,
-  CHASSIS_SUSPEND        = 32,
-  CHASSIS_ERROR          = 64
+  CHASSIS_SUSPEND_L      = 32,
+  CHASSIS_SUSPEND_R      = 64,
+  CHASSIS_SUSPEND        = 96,
+  CHASSIS_ERROR          = 128
 } chassis_state_t;
 
 typedef enum {
@@ -108,7 +110,8 @@ typedef struct{
 
 void chassis_killAutoDriver(void);
 void chassis_tempSuspend(const uint8_t cmd);
-void chassis_setVelAcclLimit(const float speed_limit, const float accl_limit);
+void chassis_setSpeedLimit(const float speed_limit);
+void chassis_setAcclLimit(const float accl_limit);
 void chassis_reverseCmd(const uint8_t cmd);
 void chassis_headingLockCmd(const uint8_t cmd);
 void chassis_autoCmd(const uint8_t dir, const float cmd);

@@ -71,7 +71,8 @@ static THD_FUNCTION(Island_thread, p)
   if(!lift_getError())
     lift_calibrate();
 
-  gripper_calibrate();
+  if(!gripper_getError())
+    gripper_calibrate();
 
   systime_t roller_in_start;
 
