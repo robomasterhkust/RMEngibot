@@ -153,7 +153,7 @@ static THD_FUNCTION(gripper_control, p)
     {
       if(gripper_state == GRIPPER_INITING)
       {
-        output_max[0] = 3500;
+        output_max[0] = 7000;
         output_max[1] = 3500;
       }
       else
@@ -169,6 +169,7 @@ static THD_FUNCTION(gripper_control, p)
 }
 
 #define STALL_COUNT_MAX 100U
+int count = 0;
 void gripper_calibrate(void)
 {
   //To initialize the lift wheel, a calibration is needed
@@ -182,6 +183,7 @@ void gripper_calibrate(void)
   uint8_t stall_count[GRIPPER_MOTOR_NUM] = {0, 0};
 
   const float motor_step[GRIPPER_MOTOR_NUM] = {0.002f, 0.02f};
+  
   while(init_count < GRIPPER_MOTOR_NUM)
   {
     uint8_t i;
@@ -208,11 +210,12 @@ void gripper_calibrate(void)
 
       init_count += init_state[i] ? 1 : 0;
     }
-
+    if(count == 0 && init_state[0] == true){
+      ++count;
+      motors[0].pos_sp = offset[0] - 0.1f;
+    }
     chThdSleepMilliseconds(2);
   }
-
-  motors[0].pos_sp = offset[0] - 0.1f;
   motors[1].pos_sp = offset[1] - 0.1f;
   gripper_state = GRIPPER_RUNNING;
 }
