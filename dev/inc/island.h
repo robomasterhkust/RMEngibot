@@ -1,8 +1,11 @@
 #ifndef _ISLAND_H_
 #define _ISLAND_H_
 
-#define ISLAND_SPEED_LIMIT_LOW    0.3f
-#define ISLAND_SPEED_LIMIT_HIGH   0.6f
+#define ISLAND_SPEED_LIMIT_LOW    0.2f
+#define ISLAND_SPEED_LIMIT_HIGH   0.5f
+
+#define ISLAND_ACCL_LIMIT_LOW    1.0f
+#define ISLAND_ACCL_LIMIT_HIGH   4.0f
 
 #define ROBOT_STATE_NUM  19U
 typedef enum {

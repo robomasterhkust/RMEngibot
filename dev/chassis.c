@@ -20,11 +20,12 @@ static RC_Ctl_t* pRC;
 static PIMUStruct pIMU;
 
 //RC input of chassis controller
-static int16_t strafe_rc = 0.0f, drive_rc = 0.0f, heading_rc = 0.0f;
-static int8_t rc_reversed = 1; //-1: reverse, 0: kill, 1: no reverse
-static float rc_speed_limit = 1.0f; //value from 0 ~ 1
-static float rc_accl_limit = 1.0f; //value from 0 ~ 1
-static float heading_sp;
+static float   strafe_rc = 0.0f, drive_rc = 0.0f, heading_rc = 0.0f;
+static int8_t  rc_reversed       = 1; //-1: reverse, 0: kill, 1: no reverse
+static float   rc_speed_limit_sp = 1.0f;
+static float   rc_speed_limit    = 1.0f; //value from 0 ~ 1
+static float   rc_accl_limit     = 100.0f;  //value from 0-100
+static float   heading_sp;
 
 #define chassis_canUpdate()   \
   (can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID, \
@@ -44,12 +45,14 @@ uint32_t chassis_getError(void)
 
 void chassis_setSpeedLimit(const float speed)
 {
-  rc_speed_limit = speed;
+  if(speed >= 0.0f && speed <= 1.0f)
+    rc_speed_limit_sp = speed;
 }
 
 void chassis_setAcclLimit(const float accl)
 {
-  rc_accl_limit = accl;
+  if(accl > 0.0f && accl <= 100.0f)
+    rc_accl_limit = accl;
 }
 
 void chassis_headingLockCmd(const uint8_t cmd)
@@ -87,37 +90,59 @@ static void chassis_kill(void)
 #define THRESHOLD (RC_CH_VALUE_MAX - RC_CH_VALUE_MIN)/100
 static void chassis_inputCmd(void)
 {
-  int16_t RX_X2 = pRC->rc.channel0 ,
-          RX_Y1 = pRC->rc.channel1 ,
-          RX_X1 = pRC->rc.channel2;
+  float   last_strafe = strafe_rc,
+          last_drive = drive_rc; //Used to limit strafe and drive acceleration
 
-  if(ABS(RX_X2 - RC_CH_VALUE_OFFSET) < THRESHOLD)
-    RX_X2 = RC_CH_VALUE_OFFSET;
-  if(ABS(RX_Y1 - RC_CH_VALUE_OFFSET) < THRESHOLD)
-    RX_Y1 = RC_CH_VALUE_OFFSET;
-  if(ABS(RX_X1 - RC_CH_VALUE_OFFSET) < THRESHOLD)
-    RX_X1 = RC_CH_VALUE_OFFSET;
+  int16_t RX_X2 = (pRC->rc.channel0 - RC_CH_VALUE_OFFSET
+          #ifdef CHASSIS_USE_KEYBOARD
+            + ((pRC->keyboard.key_code & KEY_D) - (pRC->keyboard.key_code & KEY_A))
+            * RC_CHASSIS_KEYBOARD_SCALER * (pRC->keyboard.key_code & KEY_SHIFT ? 1.33f : 1.0f)
+          #endif
+          ) * rc_reversed,
 
-  strafe_rc = (int16_t)(RX_X2 - RC_CH_VALUE_OFFSET
-      #ifdef CHASSIS_USE_KEYBOARD
-        +((pRC->keyboard.key_code & KEY_D) - (pRC->keyboard.key_code & KEY_A))
-        * RC_CHASSIS_KEYBOARD_SCALER * (pRC->keyboard.key_code & KEY_SHIFT ? 1.33f : 1.0f)
-      #endif
-    ) * rc_reversed;
-  drive_rc = (int16_t)(RX_Y1 - RC_CH_VALUE_OFFSET
-      #ifdef CHASSIS_USE_KEYBOARD
-        +((pRC->keyboard.key_code & KEY_W) - (pRC->keyboard.key_code & KEY_S))
-        * RC_CHASSIS_KEYBOARD_SCALER * (pRC->keyboard.key_code & KEY_SHIFT ? 1.33f : 1.0f)
-      #endif
-    ) * rc_reversed;
-  heading_rc = (int16_t)(RX_X1 - RC_CH_VALUE_OFFSET
-      #ifdef CHASSIS_USE_KEYBOARD
-        +pRC->mouse.x * RC_CHASSIS_MOUSE_SCALER
-      #endif
-    ) * rc_reversed;
+          RX_Y1 = (pRC->rc.channel1 - RC_CH_VALUE_OFFSET
+          #ifdef CHASSIS_USE_KEYBOARD
+            + ((pRC->keyboard.key_code & KEY_W) - (pRC->keyboard.key_code & KEY_S))
+            * RC_CHASSIS_KEYBOARD_SCALER * (pRC->keyboard.key_code & KEY_SHIFT ? 1.33f : 1.0f)
+          #endif
+          ) * rc_reversed,
 
-  strafe_rc = boundOutput((float)strafe_rc, 660 * rc_speed_limit);
-  drive_rc = boundOutput((float)drive_rc, 660 * rc_speed_limit);
+          RX_X1 = (pRC->rc.channel2 - RC_CH_VALUE_OFFSET
+          #ifdef CHASSIS_USE_KEYBOARD
+            +pRC->mouse.x * RC_CHASSIS_MOUSE_SCALER
+          #endif
+          ) * rc_reversed;
+
+  if(ABS(RX_X2) < THRESHOLD)
+    RX_X2 = 0;
+  if(ABS(RX_Y1) < THRESHOLD)
+    RX_Y1 = 0;
+  if(ABS(RX_X1) < THRESHOLD)
+    RX_X1 = 0;
+
+  if(RX_X2 > strafe_rc + CHASSIS_XYACCL_LIMIT_RATIO * rc_accl_limit)
+    strafe_rc += CHASSIS_XYACCL_LIMIT_RATIO * rc_accl_limit;
+  else if(RX_X2 < strafe_rc - CHASSIS_XYACCL_LIMIT_RATIO * rc_accl_limit)
+    strafe_rc -= CHASSIS_XYACCL_LIMIT_RATIO * rc_accl_limit;
+  else
+    strafe_rc = RX_X2 ;
+
+  if(RX_Y1 > drive_rc + rc_accl_limit)
+    drive_rc += rc_accl_limit;
+  else if(RX_Y1 < drive_rc - rc_accl_limit)
+    drive_rc -= rc_accl_limit;
+  else
+    drive_rc = RX_Y1;
+
+  heading_rc = RX_X1;
+
+  if(rc_speed_limit < rc_speed_limit_sp)
+    rc_speed_limit += 0.005f;
+  else if(rc_speed_limit > rc_speed_limit_sp)
+    rc_speed_limit -= 0.005f;
+
+  strafe_rc = boundOutput(strafe_rc, 660 * rc_speed_limit);
+  drive_rc = boundOutput(drive_rc, 660 * rc_speed_limit);
 }
 
 #define   CHASSIS_ANGLE_PSC 7.6699e-4 //2*M_PI/0x1FFF

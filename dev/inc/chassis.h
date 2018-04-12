@@ -18,6 +18,13 @@
 #define CHASSIS_UPDATE_PERIOD_US 1000000/CHASSIS_UPDATE_FREQ
 #define CHASSIS_HEADING_CONTROL
 
+/*
+ *  NOTE: We use different accl limit for strafe and drive,
+ *  due to different dynamic property of the chassis
+ *  VALUE = STRAFE_LIMIT / DRIVE_LIMIT
+ */
+#define CHASSIS_XYACCL_LIMIT_RATIO 0.75f
+
 //#define CHASSIS_POWER_LIMIT
 //#define CHASSIS_USE_KEYBOARD
 
