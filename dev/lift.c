@@ -67,16 +67,16 @@ static void lift_encoderUpdate(void)
       //Check validiaty of can connection
       encoders[i].updated = false;
 
-      float pos_input = encoders[i].raw_angle*LIFT_ANGLE_PSC;
-      float speed_input = encoders[i].raw_speed*LIFT_SPEED_PSC;
+       float pos_input = encoders[i].raw_angle*LIFT_ANGLE_PSC;
+       float speed_input = encoders[i].raw_speed*LIFT_SPEED_PSC;
 
-      if((motors[i]._prev < 0.6f && pos_input > 5.68f) ||
-        (speed_input < -80.0f && pos_input > motors[i]._prev))
-        motors[i].rev--;
-      if((motors[i]._prev > 5.68f && pos_input < 0.6f) ||
-        (speed_input > 80.0f && pos_input < motors[i]._prev))
-        motors[i].rev++;
-
+      // if((motors[i]._prev < 0.6f && pos_input > 5.68f) ||
+      //   (speed_input < -80.0f && pos_input > motors[i]._prev))
+      //   motors[i].rev--;
+      // if((motors[i]._prev > 5.68f && pos_input < 0.6f) ||
+      //   (speed_input > 80.0f && pos_input < motors[i]._prev))
+      //   motors[i].rev++;
+      motors[i].rev = encoders[i].round_count;
       motors[i]._prev = pos_input;
       pos_input += motors[i].rev * 2*M_PI;
 

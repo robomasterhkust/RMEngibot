@@ -114,7 +114,9 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   chprintf(chp, "Yaw: %f\r\n", pIMU->euler_angle[Yaw]);
 
 
-  chprintf(chp,"State: %x\r\n",  chassis->state);
+  chprintf(chp,"Chassis State: %x\r\n",  chassis->state);
+
+  chprintf(chp,"island State: %x\r\n",   island_getRobotState());
 
   chprintf(chp, "ChassisError: %x\r\n", chassis_getError());
   chprintf(chp, "LiftError: %x\r\n", lift_getError());
@@ -260,6 +262,15 @@ void cmd_gyro(BaseSequentialStream * chp, int argc, char *argv[])
       chprintf(chp,"Angle: %f\n", _pGyro->angle);
 }
 
+void cmd_lift_check(BaseSequentialStream * chp, int argc, char *argv[]){
+  (void) argc,argv;
+  motorPosStruct* lifts = lift_get();
+  chprintf(chp,"lift1 :%f\r\n", lifts[0].pos_sp);
+  chprintf(chp,"lift2 :%f\r\n", lifts[1].pos_sp);
+  chprintf(chp,"lift3 :%f\r\n", lifts[2].pos_sp);
+  chprintf(chp,"lift4 :%f\r\n", lifts[3].pos_sp);
+  
+}
 
 /**
  * @brief array of shell commands, put the corresponding command and functions below
@@ -273,6 +284,7 @@ static const ShellCommand commands[] =
   {"temp", cmd_temp},
   {"gyro", cmd_gyro},
   {"WTF", cmd_error},
+  {"lift_check",cmd_lift_check},
   {"\xEE", cmd_data},
   #ifdef PARAMS_USE_USB
     {"\xFD",cmd_param_scale},
