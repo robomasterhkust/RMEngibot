@@ -113,7 +113,7 @@ int main(void) {
   rangeFinder_init();
   attitude_init();
   RC_init();
-
+  judgeinit();
   while(!power_check())
   {
     chThdSleepMilliseconds(100);
