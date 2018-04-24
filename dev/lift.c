@@ -48,7 +48,7 @@ bool lift_inPosition(void)
 
 void lift_kill(void)
 {
-  LEDY_ON();
+  LEDR_ON();
 
   if(lift_state == LIFT_RUNNING)
   {

@@ -160,7 +160,7 @@ void cmd_error(BaseSequentialStream * chp, int argc, char *argv[])
   if(error)
     chprintf(chp,"LIFT ERROR:    %X\r\n", error);
 
-  LEDY_OFF();
+  LEDR_OFF();
 }
 
 /**

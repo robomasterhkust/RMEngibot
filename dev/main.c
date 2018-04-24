@@ -133,7 +133,7 @@ int main(void) {
     {
       wdgReset(&WDGD1);
     }
-    elses
+    else
     {
       lift_kill();
     }
@@ -151,6 +151,8 @@ int main(void) {
   */
 bool power_check(void)
 {
+  
+  
   ChassisEncoder_canStruct* can = can_getChassisMotor();
 
   return can->updated;

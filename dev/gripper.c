@@ -23,7 +23,7 @@ motorPosStruct* gripper_get(void)
 
 void gripper_kill(void)
 {
-  LEDY_ON();
+  LEDR_ON();
   gripper_state = GRIPPER_ERROR;
   can_motorSetCurrent(GRIPPER_CAN, GRIPPER_CAN_EID, 0, 0, 0, 0);
 }
