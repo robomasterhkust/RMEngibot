@@ -133,7 +133,7 @@ int main(void) {
     {
       wdgReset(&WDGD1);
     }
-    else
+    elses
     {
       lift_kill();
     }
