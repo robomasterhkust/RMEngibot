@@ -114,10 +114,10 @@ int main(void) {
   attitude_init();
   RC_init();
   judgeinit();
-  while(!power_check())
-  {
-    chThdSleepMilliseconds(100);
-  }
+  // while(!power_check())
+  // {
+  //   chThdSleepMilliseconds(100);
+  // }
 
   /* Init sequence 3: actuators, display*/
   chassis_init();

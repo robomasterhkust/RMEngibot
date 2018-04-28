@@ -130,13 +130,13 @@ void lift_changePos(const float pos_sp1, const float pos_sp2,
     motors[3].pos_sp = offset[3] - pos_sp4;
   }
 }
-
+#define STALL_COUNT_MAX 100
 void lift_calibrate(void)
 {
   //To initialize the lift wheel, a calibration is needed
   //CAUTION!! Moving lift wheel may cause injury, stay back during power up!!
 
-  uint8_t init_state = 0;
+  // uint8_t init_state = 0;
 
   pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 5000));
   chThdSleepMilliseconds(500);
@@ -151,39 +151,81 @@ void lift_calibrate(void)
   pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 0));
   chThdSleepMilliseconds(500);
 
-  while(init_state < 0x0f)
+  // while(init_state < 0x0f)
+  // {
+  //   if(!LS2_DOWN())
+  //     motors[0].pos_sp+= 0.02f;
+  //   else
+  //   {
+  //     init_state |= 0x01;
+  //     offset[0] = motors[0]._pos;
+  //   }
+  //   if(!LS1_DOWN())
+  //     motors[1].pos_sp+= 0.02f;
+  //   else
+  //   {
+  //     init_state |= 0x02;
+  //     offset[1] = motors[1]._pos;
+  //   }
+  //   if(!LS0_DOWN())
+  //     motors[2].pos_sp+= 0.02f;
+  //   else
+  //   {
+  //     init_state |= 0x04;
+  //     offset[2] = motors[2]._pos;
+  //   }
+  //   if(!LS3_DOWN())
+  //     motors[3].pos_sp+= 0.02f;
+  //   else
+  //   {
+  //     init_state |= 0x08;
+  //     offset[3] = motors[3]._pos;
+  //   }
+
+  //   chThdSleepMilliseconds(2);
+  //}
+
+  bool init_state[LIFT_MOTOR_NUM] = {0, 0,0,0};
+
+  float prev_pos[LIFT_MOTOR_NUM];
+
+  uint8_t init_count = 0;
+  uint8_t stall_count[LIFT_MOTOR_NUM] = {0,0,0,0};
+
+  const float motor_step[LIFT_MOTOR_NUM] = {0.02f, 0.02f,0.02f,0.02f};
+  
+  while(init_count < LIFT_MOTOR_NUM)
   {
-    if(!LS2_DOWN())
-      motors[0].pos_sp+= 0.02f;
-    else
+    uint8_t i;
+    init_count = 0;  //finish initialization only if all motor calibration finishes
+    for (i = 0; i < LIFT_MOTOR_NUM; i++)
     {
-      init_state |= 0x01;
-      offset[0] = motors[0]._pos;
-    }
-    if(!LS1_DOWN())
-      motors[1].pos_sp+= 0.02f;
-    else
-    {
-      init_state |= 0x02;
-      offset[1] = motors[1]._pos;
-    }
-    if(!LS0_DOWN())
-      motors[2].pos_sp+= 0.02f;
-    else
-    {
-      init_state |= 0x04;
-      offset[2] = motors[2]._pos;
-    }
-    if(!LS3_DOWN())
-      motors[3].pos_sp+= 0.02f;
-    else
-    {
-      init_state |= 0x08;
-      offset[3] = motors[3]._pos;
-    }
+      if(stall_count[i] < STALL_COUNT_MAX)
+      {
+        motors[i].pos_sp += motor_step[i];
+        if(motors[i]._pos - prev_pos[i] < motor_step[i] * 0.2f)
+          stall_count[i]++;
+        else if(stall_count[i] > 10)
+          stall_count[i] -= 10;
+        else
+          stall_count[i] = 0;
 
+        prev_pos[i] = motors[i]._pos;
+      }
+      else
+      {
+        init_state[i] = true;
+        offset[i] = motors[i]._pos;
+      }
+
+      init_count += init_state[i] ? 1 : 0;
+    }
+    
     chThdSleepMilliseconds(2);
   }
+  //motors[1].pos_sp = offset[1] - 0.1f;
+
+  lift_state = LIFT_RUNNING;
 }
 
 #define OUTPUT_MAX  16384
@@ -197,7 +239,7 @@ void lift_calibrate(void)
 #define LIFT_GOING_DOWN 2
 
 static int16_t lift_controlPos
-  (const motorPosStruct* const motor, pid_controller_t* const controller, const uint8_t on_foot)
+  (const motorPosStruct* const motor, pid_controller_t* const controller, const uint8_t on_foot ,const int16_t output_max)
 {
   float error = motor->pos_sp - motor->_pos;
   controller->error_int += error * controller->ki;
@@ -205,7 +247,7 @@ static int16_t lift_controlPos
   float output =
     error*controller->kp + controller->error_int - motor->_speed * controller->kd + on_foot * weight;
 
-  return (int16_t)(boundOutput(output,OUTPUT_MAX));
+  return (int16_t)(boundOutput(output,output_max));
 }
 
 static THD_WORKING_AREA(lift_control_wa, 512);
@@ -215,6 +257,7 @@ static THD_FUNCTION(lift_control, p)
   chRegSetThreadName("lift wheel controller");
 
   float output[4];
+  float output_max[4];
   uint32_t tick = chVTGetSystemTimeX();
   while(true)
   {
@@ -246,13 +289,20 @@ static THD_FUNCTION(lift_control, p)
         transition[i] = LIFT_IDLE;
     }
 
-    for(i = 0; i < 4; i++)
-      output[i] = lift_controlPos(&motors[i], &controllers[i], on_foot[i]);
+    for(i = 0; i < 4; i++){
 
-    if(lift_state == LIFT_RUNNING)
-      can_motorSetCurrent(LIFT_CAN, LIFT_CAN_EID,
-        	output[3], output[2], output[1], output[0]);
+      if(lift_state == LIFT_INITING)
+      {
+          output_max[i] = 4000;
+      }
+      else
+        output_max[i] =  OUTPUT_MAX;
+      output[i] = lift_controlPos(&motors[i], &controllers[i], on_foot[i],output_max[i]);
+    }
+    can_motorSetCurrent(LIFT_CAN, LIFT_CAN_EID,
+         output[3], output[2], output[1], output[0]);
   }
+ 
 }
 
 static const FRLName = "FR_lift";
@@ -281,9 +331,9 @@ void lift_init(void)
   params_set(&controllers[1], 14,3,BRLName,subname_PID,PARAM_PUBLIC);
   params_set(&controllers[2], 15,3,FRLName,subname_PID,PARAM_PUBLIC);
   params_set(&controllers[3], 16,3,FLLName,subname_PID,PARAM_PUBLIC);
-
+  lift_state = LIFT_INITING;
   chThdCreateStatic(lift_control_wa, sizeof(lift_control_wa),
                           NORMALPRIO, lift_control, NULL);
 
-  lift_state = LIFT_RUNNING;
+  
 }
