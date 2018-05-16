@@ -180,7 +180,7 @@ static void chassis_encoderUpdate(void)
   #endif
 }
 
-#define OUTPUT_MAX  30000
+#define OUTPUT_MAX  16300
 static int16_t chassis_controlSpeed(const motorStruct* motor, pi_controller_t* const controller)
 {
   float error = motor->speed_sp - motor->_speed;
@@ -193,7 +193,7 @@ static int16_t chassis_controlSpeed(const motorStruct* motor, pi_controller_t* c
 #define HEADING_PSC VEL_MAX/HEADING_MAX
 
 #ifdef CHASSIS_POWER_LIMIT
-  #define TOTAL_OUTPUT_MAX 60000.0f
+  #define TOTAL_OUTPUT_MAX 30000.0f
 #endif
 
 static void drive_kinematics(const float strafe_vel, const float drive_vel, const float heading_vel)

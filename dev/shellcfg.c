@@ -308,9 +308,15 @@ static const ShellConfig shell_cfg1 =
  *
  * @api
  */
+static const SerialConfig SERIAL_CMD_CONFIG = {
+  115200,               //Baud Rate
+  USART_CR1_UE,         //CR1 Register
+  USART_CR2_LINEN,      //CR2 Register
+  0                     //CR3 Register
+};
 void shellStart(void)
 {
-  sdStart(SERIAL_CMD, NULL);
+  sdStart(SERIAL_CMD, &SERIAL_CMD_CONFIG);
   /*
    * Initializes a serial-over-USB CDC driver.
    */
