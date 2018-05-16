@@ -180,7 +180,7 @@ static void chassis_encoderUpdate(void)
   #endif
 }
 
-#define OUTPUT_MAX  30000
+#define OUTPUT_MAX  16300
 static int16_t chassis_controlSpeed(const motorStruct* motor, pi_controller_t* const controller)
 {
   float error = motor->speed_sp - motor->_speed;
@@ -193,9 +193,9 @@ static int16_t chassis_controlSpeed(const motorStruct* motor, pi_controller_t* c
 #define HEADING_PSC VEL_MAX/HEADING_MAX
 
 #ifdef CHASSIS_POWER_LIMIT
-  #define TOTAL_OUTPUT_MAX 60000.0f
+  #define TOTAL_OUTPUT_MAX 30000.0f
 #endif
-
+int16_t output[4];
 static void drive_kinematics(const float strafe_vel, const float drive_vel, const float heading_vel)
 {
   chassis._motors[FRONT_RIGHT].speed_sp =
@@ -208,7 +208,7 @@ static void drive_kinematics(const float strafe_vel, const float drive_vel, cons
     strafe_vel - drive_vel - heading_vel * HEADING_PSC;     // CAN ID: 0x204
 
   uint8_t i;
-  int16_t output[4];
+  
 
   #ifdef CHASSIS_POWER_LIMIT
     float total_output = 0;
@@ -247,6 +247,9 @@ static void drive_kinematics(const float strafe_vel, const float drive_vel, cons
     for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
       output[i] *= output_psc;
   #endif
+
+
+
 
   can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID,
       	output[FRONT_RIGHT], output[BACK_RIGHT], output[FRONT_LEFT], output[BACK_LEFT]); //FL,FR,BR,BL

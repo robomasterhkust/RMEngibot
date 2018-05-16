@@ -210,11 +210,12 @@ void gripper_calibrate(void)
       }
 
       init_count += init_state[i] ? 1 : 0;
-    }
-    if(count == 0 && init_state[0] == true){
+      if(count == 0 && init_state[0] == true){
       ++count;
       motors[0].pos_sp = offset[0] - 0.1f;
+      }
     }
+
     chThdSleepMilliseconds(2);
   }
   motors[1].pos_sp = offset[1] - 0.1f;

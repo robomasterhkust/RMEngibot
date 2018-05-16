@@ -7,11 +7,13 @@
 #define LIFT_CAN_EID  0x1FF
 #define LIFT_GEAR_RATIO 27U
 #define LIFT_CONTROL_FREQ 500U
+#define LIFT_MOTOR_NUM 4U
 
 #define LIFT_CONNECTION_ERROR_COUNT 10U
 
 typedef enum {
   LIFT_UNINIT = 0,
+  LIFT_INITING,
   LIFT_RUNNING,
   LIFT_ERROR
 } lift_state_t;

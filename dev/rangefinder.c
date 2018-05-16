@@ -71,7 +71,7 @@ static void gpt5_cb(GPTDriver *gptp)
   gptp->tim->CCER = CCER;
 }
 
-static void gpt8_cb(GPTDriver *gptp)
+static void gpt4_cb(GPTDriver *gptp)
 {
   uint16_t SR = gptp->tim->SR;
   uint16_t CCER = gptp->tim->CCER;
@@ -107,15 +107,15 @@ static void gpt8_cb(GPTDriver *gptp)
  *
  * @isr
  */
-CH_IRQ_HANDLER(STM32_TIM8_CC_HANDLER) {
+// CH_IRQ_HANDLER(STM32_TIM8_CC_HANDLER) {
 
-  CH_IRQ_PROLOGUE();
+//   CH_IRQ_PROLOGUE();
 
-  gpt8_cb(&GPTD8);
-  GPTD8.tim->SR = 0;
+//   gpt8_cb(&GPTD8);
+//   GPTD8.tim->SR = 0;
 
-  CH_IRQ_EPILOGUE();
-}
+//   CH_IRQ_EPILOGUE();
+// }
 
 /*
  * GPT5 configuration.
@@ -128,11 +128,11 @@ static const GPTConfig gpt5_cfg = {
 };
 
 /*
- * GPT8 configuration.
+ * GPT4 configuration.
  */
-static const GPTConfig gpt8_cfg = {
+static const GPTConfig gpt4_cfg = {
   RANGEFINDER_TIM_FREQ,
-  NULL,   /* Timer callback.*/
+  gpt4_cb,   /* Timer callback.*/
   0,
   0
 };
@@ -148,7 +148,7 @@ void rangeFinder_control(const uint8_t index, const bool enable)
   if(index < RANGEFINDER_INDEX_RIGHT_BUM)
     gpt = &GPTD5;
   else
-    gpt = &GPTD8;
+    gpt = &GPTD4;
 
   CCER = gpt->tim->CCER;
   DIER = gpt->tim->DIER;
@@ -209,13 +209,13 @@ void rangeFinder_init(void)
   GPTD5.tim->CNT = 10000000U;
   GPTD5.tim->CR1 |= STM32_TIM_CR1_ARPE | STM32_TIM_CR1_CEN;
 
-  //  GPTD8 setup
-  gptStart(&GPTD8, &gpt8_cfg);
-  nvicDisableVector(STM32_TIM8_UP_NUMBER); //TIM8 has two interrupt vectors, we are using the CC vector
-  nvicEnableVector(STM32_TIM8_CC_NUMBER, STM32_GPT_TIM8_IRQ_PRIORITY);
-  GPTD8.tim->DIER = 0;
-  GPTD8.tim->CCER = 0;
-  GPTD8.tim->CCMR1 |= STM32_TIM_CCMR1_CC1S(1) | STM32_TIM_CCMR1_IC1F(3);
-  GPTD8.tim->CNT = 0U;
-  GPTD8.tim->CR1 |= STM32_TIM_CR1_ARPE | STM32_TIM_CR1_CEN;
+  //  GPTD4 setup
+  gptStart(&GPTD4, &gpt4_cfg);
+  // nvicDisableVector(STM32_TIM8_UP_NUMBER); //TIM8 has two interrupt vectors, we are using the CC vector
+  // nvicEnableVector(STM32_TIM8_CC_NUMBER, STM32_GPT_TIM8_IRQ_PRIORITY);
+  GPTD4.tim->DIER = 0;
+  GPTD4.tim->CCER = 0;
+  GPTD4.tim->CCMR1 |= STM32_TIM_CCMR1_CC1S(1) | STM32_TIM_CCMR1_IC1F(3);
+  GPTD4.tim->CNT = 0U;
+  GPTD4.tim->CR1 |= STM32_TIM_CR1_ARPE | STM32_TIM_CR1_CEN;
 }

@@ -419,7 +419,7 @@
                                      PIN_MODE_ANALOG(GPIOB_ADC1_IN9) |           \
                                      PIN_MODE_INPUT(GPIOB_PIN2_KEY) |           \
                                      PIN_MODE_INPUT(GPIOB_PIN3) |        \
-                                     PIN_MODE_ALTERNATE(GPIOB_PIN4_TIM3_BUZZER) |           \
+                                     PIN_MODE_OUTPUT(GPIOB_PIN4_TIM3_BUZZER) |           \
                                      PIN_MODE_ALTERNATE(GPIOB_TIM3_HEAT_PWM) |           \
                                      PIN_MODE_INPUT(GPIOB_UART1_TX) |        \
                                      PIN_MODE_ALTERNATE(GPIOB_UART1_RX) |           \
