@@ -35,8 +35,8 @@
   #define RC_CHASSIS_KEYBOARD_SCALER  440
 #endif
 
-#define VEL_MAX    ((int16_t) 277)              //
-#define VEL_MIN    ((int16_t)-277)              //
+#define VEL_MAX    ((int16_t) 417)              //
+#define VEL_MIN    ((int16_t)-417)              //
 #define HEADING_MAX    6.0f
 #define HEADING_MIN    -6.0f
 #define HEADING_MAX_AUTO    2.0f

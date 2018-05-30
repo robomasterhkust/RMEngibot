@@ -136,10 +136,13 @@ static void chassis_inputCmd(void)
 
   heading_rc = RX_X1;
 
-  if(rc_speed_limit < rc_speed_limit_sp)
-    rc_speed_limit += 0.005f;
-  else if(rc_speed_limit > rc_speed_limit_sp)
-    rc_speed_limit -= 0.005f;
+  //The speed limit changes smoothly in order to prevent sharp change of vehicle speed
+  if(rc_speed_limit < rc_speed_limit_sp - 0.01f)
+    rc_speed_limit += 0.01f;
+  else if(rc_speed_limit > rc_speed_limit_sp + 0.01f)
+    rc_speed_limit -= 0.01f;
+  else
+    rc_speed_limit = rc_speed_limit_sp;
 
   strafe_rc = boundOutput(strafe_rc, 660 * rc_speed_limit);
   drive_rc = boundOutput(drive_rc, 660 * rc_speed_limit);
@@ -198,14 +201,12 @@ static int16_t chassis_controlSpeed(const motorStruct* motor, pi_controller_t* c
 
 static void drive_kinematics(const float strafe_vel, const float drive_vel, const float heading_vel)
 {
-  chassis._motors[FRONT_RIGHT].speed_sp =
-    -strafe_vel - drive_vel - heading_vel * HEADING_PSC;   // CAN ID: 0x201
-  chassis._motors[BACK_RIGHT].speed_sp =
-    -strafe_vel + drive_vel - heading_vel * HEADING_PSC;       // CAN ID: 0x202
-  chassis._motors[FRONT_LEFT].speed_sp =
-    strafe_vel + drive_vel - heading_vel * HEADING_PSC;       // CAN ID: 0x203
-  chassis._motors[BACK_LEFT].speed_sp =
-    strafe_vel - drive_vel - heading_vel * HEADING_PSC;     // CAN ID: 0x204
+  float speed_sp[4];
+
+  speed_sp[FRONT_RIGHT] = -strafe_vel - drive_vel - heading_vel * HEADING_PSC;   // CAN ID: 0x201
+  speed_sp[BACK_RIGHT]  = -strafe_vel + drive_vel - heading_vel * HEADING_PSC;   // CAN ID: 0x202
+  speed_sp[FRONT_LEFT]  =  strafe_vel + drive_vel - heading_vel * HEADING_PSC;   // CAN ID: 0x203
+  speed_sp[BACK_LEFT]   =  strafe_vel - drive_vel - heading_vel * HEADING_PSC;   // CAN ID: 0x204
 
   uint8_t i;
   int16_t output[4];
@@ -216,6 +217,21 @@ static void drive_kinematics(const float strafe_vel, const float drive_vel, cons
 
   if(chassis.state & CHASSIS_SUSPEND)
     can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID, 0, 0, 0, 0); //FL,FR,BR,BL
+
+  //The max RPM of motor is defined to be |VEL_MAX|,
+  //scale down the mixed motor speed to maintain correct direction and limit the max |speed setpoint| under |VEL_MAX|
+  float speed_scaler, max_speed_sp = 0.0f;
+  for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
+    if(ABS(speed_sp[i]) > max_speed_sp)
+      max_speed_sp = ABS(speed_sp[i]);
+
+  if(max_speed_sp > VEL_MAX)
+    speed_scaler = VEL_MAX/max_speed_sp;
+  else
+    speed_scaler = 1.0f;
+
+  for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
+    chassis._motors[i].speed_sp = speed_scaler * speed_sp[i];
 
   for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
   {
