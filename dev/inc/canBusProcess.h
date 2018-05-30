@@ -45,6 +45,7 @@ typedef enum
 
 typedef struct {
   uint16_t raw_angle;
+    int16_t torque;
   int16_t  raw_current;
   int16_t  current_setpoint;
 
@@ -60,6 +61,7 @@ typedef struct {
 typedef struct {
   uint16_t raw_angle;
   int16_t  raw_speed;
+
   int16_t act_current;
   uint8_t temperature;
 

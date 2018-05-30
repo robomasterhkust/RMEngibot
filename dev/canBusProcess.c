@@ -68,7 +68,7 @@ static inline void can_processChassisEncoder
 
   chSysUnlock();
 }
-
+//for normal gimbal motor 
 static inline void can_processGimbalEncoder
   (volatile GimbalEncoder_canStruct* gm, const CANRxFrame* const rxmsg)
 {
@@ -79,7 +79,7 @@ static inline void can_processGimbalEncoder
   gm->raw_angle        = (uint16_t)(rxmsg->data8[0]) << 8 | rxmsg->data8[1];
   gm->raw_current      = (int16_t)((rxmsg->data8[2]) << 8 | rxmsg->data8[3]);
   gm->current_setpoint = (int16_t)((rxmsg->data8[4]) << 8 | rxmsg->data8[5]);
-
+  
 
   if      (gm->raw_angle - prev_angle >  CAN_ENCODER_RANGE / 2) gm->round_count--;
   else if (gm->raw_angle - prev_angle < -CAN_ENCODER_RANGE / 2) gm->round_count++;
@@ -89,6 +89,29 @@ static inline void can_processGimbalEncoder
 
   chSysUnlock();
 }
+//for GM 3510
+static inline void can_processGimbalEncoder3510
+  (volatile GimbalEncoder_canStruct* gm, const CANRxFrame* const rxmsg)
+{
+  uint16_t prev_angle = gm->raw_angle;
+
+  chSysLock();
+  gm->updated = true;
+  gm->raw_angle        = (uint16_t)(rxmsg->data8[0]) << 8 | rxmsg->data8[1];
+  gm->torque     = (int16_t)((rxmsg->data8[2]) << 8 | rxmsg->data8[3]);
+  //gm->current_setpoint = (int16_t)((rxmsg->data8[4]) << 8 | rxmsg->data8[5]);
+  
+
+  if      (gm->raw_angle - prev_angle >  CAN_ENCODER_RANGE / 2) gm->round_count--;
+  else if (gm->raw_angle - prev_angle < -CAN_ENCODER_RANGE / 2) gm->round_count++;
+
+  gm->radian_angle = ((float)gm->round_count * CAN_ENCODER_RANGE + gm->raw_angle)
+                      * CAN_ENCODER_RADIAN_RATIO;
+
+  chSysUnlock();
+}
+
+
 
 static void can_processEncoderMessage(CANDriver* const canp, const CANRxFrame* const rxmsg)
 {
@@ -109,10 +132,11 @@ static void can_processEncoderMessage(CANDriver* const canp, const CANRxFrame* c
           can_processChassisEncoder(&chassis_encoder[BACK_RIGHT] ,rxmsg);
           break;
         case CAN_GIMBAL_YAW_FEEDBACK_MSG_ID:
+          //currently nothing 
           can_processGimbalEncoder(&gimbal_encoder[GIMBAL_YAW] ,rxmsg);
           break;
         case CAN_GIMBAL_PITCH_FEEDBACK_MSG_ID:
-          can_processGimbalEncoder(&gimbal_encoder[GIMBAL_PITCH] ,rxmsg);
+          can_processGimbalEncoder3510(&gimbal_encoder[GIMBAL_PITCH] ,rxmsg);
           break;
     }
   }
