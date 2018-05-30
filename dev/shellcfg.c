@@ -8,8 +8,8 @@
 #include <string.h>
 #include "rangefinder.h"
 #include "island.h"
-#define SERIAL_CMD       &SD3
-#define SERIAL_DATA      &SD3
+#define SERIAL_CMD       &SDU1
+#define SERIAL_DATA      &SDU1
 
 static thread_t* matlab_thread_handler = NULL;
 /**
@@ -105,7 +105,7 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   PGyroStruct PGyro = gyro_get();
   chassisStruct* chassis = chassis_get();
 
-  chprintf(chp, "AccelX: %f\r565\n", pIMU->accelData[X]);
+  chprintf(chp, "AccelX: %f\r\n", pIMU->accelData[X]);
   chprintf(chp, "AccelY: %f\r\n", pIMU->accelData[Y]);
   chprintf(chp, "AccelZ: %f\r\n", pIMU->accelData[Z]);
 
@@ -113,16 +113,21 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   chprintf(chp, "Pitch: %f\r\n", pIMU->euler_angle[Pitch]);
   chprintf(chp, "Yaw: %f\r\n", pIMU->euler_angle[Yaw]);
 
+  chprintf(chp, "motors0: %f\r\n", chassis->_motors[0].speed_sp);
+  chprintf(chp, "motors1: %f\r\n", chassis->_motors[1].speed_sp);
+  chprintf(chp, "motors2: %f\r\n", chassis->_motors[2].speed_sp);
+  chprintf(chp, "motors3: %f\r\n", chassis->_motors[3].speed_sp);
 
-  chprintf(chp,"Chassis State: %x\r\n",  chassis->state);
+  chprintf(chp, "motors0: %f\r\n", chassis->_motors[0]._speed);
+  chprintf(chp, "motors1: %f\r\n", chassis->_motors[1]._speed);
+  chprintf(chp, "motors2: %f\r\n", chassis->_motors[2]._speed);
+  chprintf(chp, "motors3: %f\r\n", chassis->_motors[3]._speed);
+}
 
-  chprintf(chp,"island State: %x\r\n",   island_getRobotState());
-
-  chprintf(chp, "ChassisError: %x\r\n", chassis_getError());
-  chprintf(chp, "LiftError: %x\r\n", lift_getError());
-  chprintf(chp, "Gripper Error:%x\r\n",gripper_getError());
-
+void cmd_test_RF(BaseSequentialStream * chp, int argc, char *argv[])
+{
   enable_all_rangefinder();
+  chprintf(chp, "Testing rangefinder...\r\n");
   chThdSleepMilliseconds(1000);
   int j;
   for (j = 0; j < RANGEFINDER_NUM; ++j)
@@ -130,7 +135,6 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
      chprintf(chp, "rangefinder %i:%f\r\n",j,rangeFinder_getDistance(j));
   }
   disable_all_rangefinder();
-
 }
 
 void cmd_drive(BaseSequentialStream * chp, int argc, char *argv[])
@@ -160,7 +164,16 @@ void cmd_error(BaseSequentialStream * chp, int argc, char *argv[])
   if(error)
     chprintf(chp,"LIFT ERROR:    %X\r\n", error);
 
-  LEDY_OFF();
+  chassisStruct* chassis = chassis_get();
+
+  chprintf(chp,"Chassis State: %x\r\n",  chassis->state);
+  chprintf(chp,"island State: %x\r\n",   island_getRobotState());
+
+  chprintf(chp, "ChassisError: %x\r\n", chassis_getError());
+  chprintf(chp, "LiftError: %x\r\n", lift_getError());
+  chprintf(chp, "Gripper Error:%x\r\n",gripper_getError());
+
+  LEDR_OFF();
 }
 
 /**
@@ -269,7 +282,6 @@ void cmd_lift_check(BaseSequentialStream * chp, int argc, char *argv[]){
   chprintf(chp,"lift2 :%f\r\n", lifts[1].pos_sp);
   chprintf(chp,"lift3 :%f\r\n", lifts[2].pos_sp);
   chprintf(chp,"lift4 :%f\r\n", lifts[3].pos_sp);
-  
 }
 
 /**
@@ -279,6 +291,7 @@ void cmd_lift_check(BaseSequentialStream * chp, int argc, char *argv[]){
 static const ShellCommand commands[] =
 {
   {"test", cmd_test},
+  {"rf", cmd_test_RF},
   {"drive", cmd_drive},
   {"cal", cmd_calibrate},
   {"temp", cmd_temp},
@@ -314,27 +327,28 @@ static const SerialConfig SERIAL_CMD_CONFIG = {
   USART_CR2_LINEN,      //CR2 Register
   0                     //CR3 Register
 };
+
 void shellStart(void)
 {
-  sdStart(SERIAL_CMD, &SERIAL_CMD_CONFIG);
+  //sdStart(SERIAL_CMD, &SERIAL_CMD_CONFIG);
   /*
    * Initializes a serial-over-USB CDC driver.
    */
-  // sduObjectInit(&SDU1);
-  // sduStart(&SDU1, &serusbcfg);
+  sduObjectInit(&SDU1);
+  sduStart(&SDU1, &serusbcfg);
 
-  
+
   //  * Activates the USB driver and then the USB bus pull-up on D+.
   //  * Note, a delay is inserted in order to not have to disconnect the cable
   //  * after a reset.
-   
 
 
-  // usbDisconnectBus(serusbcfg.usbp);
-  // chThdSleepMilliseconds(1500);
 
-  // usbStart(serusbcfg.usbp, &usbcfg);
-  // usbConnectBus(serusbcfg.usbp);
+  usbDisconnectBus(serusbcfg.usbp);
+  chThdSleepMilliseconds(1500);
+
+  usbStart(serusbcfg.usbp, &usbcfg);
+  usbConnectBus(serusbcfg.usbp);
 
   shellInit();
 

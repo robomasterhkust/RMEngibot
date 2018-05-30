@@ -48,7 +48,7 @@ bool lift_inPosition(void)
 
 void lift_kill(void)
 {
-  LEDY_ON();
+  LEDR_ON();
 
   if(lift_state == LIFT_RUNNING)
   {
@@ -193,7 +193,7 @@ void lift_calibrate(void)
   uint8_t stall_count[LIFT_MOTOR_NUM] = {0,0,0,0};
 
   const float motor_step[LIFT_MOTOR_NUM] = {0.02f, 0.02f,0.02f,0.02f};
-  
+
   while(init_count < LIFT_MOTOR_NUM)
   {
     uint8_t i;
@@ -220,7 +220,7 @@ void lift_calibrate(void)
 
       init_count += init_state[i] ? 1 : 0;
     }
-    
+
     chThdSleepMilliseconds(2);
   }
   //motors[1].pos_sp = offset[1] - 0.1f;
@@ -302,7 +302,7 @@ static THD_FUNCTION(lift_control, p)
     can_motorSetCurrent(LIFT_CAN, LIFT_CAN_EID,
          output[3], output[2], output[1], output[0]);
   }
- 
+
 }
 
 static const FRLName = "FR_lift";
@@ -335,5 +335,5 @@ void lift_init(void)
   chThdCreateStatic(lift_control_wa, sizeof(lift_control_wa),
                           NORMALPRIO, lift_control, NULL);
 
-  
+
 }

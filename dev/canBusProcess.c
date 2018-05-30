@@ -79,7 +79,7 @@ static inline void can_processGimbalEncoder
   gm->raw_angle        = (uint16_t)(rxmsg->data8[0]) << 8 | rxmsg->data8[1];
   gm->raw_current      = (int16_t)((rxmsg->data8[2]) << 8 | rxmsg->data8[3]);
   gm->current_setpoint = (int16_t)((rxmsg->data8[4]) << 8 | rxmsg->data8[5]);
-  
+
 
   if      (gm->raw_angle - prev_angle >  CAN_ENCODER_RANGE / 2) gm->round_count--;
   else if (gm->raw_angle - prev_angle < -CAN_ENCODER_RANGE / 2) gm->round_count++;

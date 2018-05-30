@@ -23,7 +23,7 @@ motorPosStruct* gripper_get(void)
 
 void gripper_kill(void)
 {
-  LEDY_ON();
+  LEDR_ON();
   gripper_state = GRIPPER_ERROR;
   can_motorSetCurrent(GRIPPER_CAN, GRIPPER_CAN_EID, 0, 0, 0, 0);
 }
@@ -184,7 +184,7 @@ void gripper_calibrate(void)
   uint8_t stall_count[GRIPPER_MOTOR_NUM] = {0, 0};
 
   const float motor_step[GRIPPER_MOTOR_NUM] = {0.002f, 0.02f};
-  
+
   while(init_count < GRIPPER_MOTOR_NUM)
   {
     uint8_t i;
@@ -215,7 +215,7 @@ void gripper_calibrate(void)
         motors[0].pos_sp = offset[0] - 0.1f;
       }
     }
-    
+
     chThdSleepMilliseconds(2);
   }
   motors[1].pos_sp = offset[1] - 0.1f;
