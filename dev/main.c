@@ -16,6 +16,20 @@
 #include "main.h"
 
 static BaseSequentialStream* chp = (BaseSequentialStream*)&SDU1;
+//Buzzer TIM config
+static const PWMConfig pwm12cfg = {
+        800000,   /* 1MHz PWM clock frequency.   */
+        1000,      /* Initial PWM period 1ms.    width   */
+        NULL,
+        {
+          {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+          {PWM_OUTPUT_ACTIVE_HIGH, NULL},
+          {PWM_OUTPUT_DISABLED, NULL},
+          {PWM_OUTPUT_DISABLED, NULL}
+        },
+        0,
+        0
+};
 
 #define MPU6500_UPDATE_PERIOD_US 1000000U/MPU6500_UPDATE_FREQ
 static THD_WORKING_AREA(Attitude_thread_wa, 4096);
@@ -105,6 +119,7 @@ int main(void) {
   shellStart();
   params_init();
   can_processInit();
+  PWM12_start();
 
 //  extiinit(); //*
 
@@ -130,21 +145,69 @@ int main(void) {
   while (true)
   {
     if(!power_failure())
-    {
       wdgReset(&WDGD1);
-    }
     else
-    {
       lift_kill();
-    }
 
-    can_motorSetCurrent(&CAND1, 0x1FF, 10000, 4000,4000,4000);
     chThdSleepMilliseconds(200);
   }
 
   return 0;
 }
 
+void PWM12_start(void)
+{
+  PWMD12.tim = STM32_TIM12;
+  PWMD12.channels = 2;
+
+  uint32_t psc;
+  uint32_t ccer;
+  rccEnableTIM12(FALSE);
+  rccResetTIM12();
+
+  PWMD12.clock = STM32_TIMCLK1;
+
+  PWMD12.tim->CCMR1 = STM32_TIM_CCMR1_OC1M(6) | STM32_TIM_CCMR1_OC1PE |
+                     STM32_TIM_CCMR1_OC2M(6) | STM32_TIM_CCMR1_OC2PE;
+
+  psc = (PWMD12.clock / pwm12cfg.frequency) - 1;
+
+  PWMD12.tim->PSC  = psc;
+  PWMD12.tim->ARR  = pwm12cfg.period - 1;
+  PWMD12.tim->CR2  = pwm12cfg.cr2;
+  PWMD12.period = pwm12cfg.period;
+
+  ccer = 0;
+  switch (pwm12cfg.channels[0].mode & PWM_OUTPUT_MASK) {
+  case PWM_OUTPUT_ACTIVE_LOW:
+    ccer |= STM32_TIM_CCER_CC1P;
+  case PWM_OUTPUT_ACTIVE_HIGH:
+    ccer |= STM32_TIM_CCER_CC1E;
+  default:
+    ;
+  }
+  switch (pwm12cfg.channels[1].mode & PWM_OUTPUT_MASK) {
+  case PWM_OUTPUT_ACTIVE_LOW:
+    ccer |= STM32_TIM_CCER_CC2P;
+  case PWM_OUTPUT_ACTIVE_HIGH:
+    ccer |= STM32_TIM_CCER_CC2E;
+  default:
+    ;
+  }
+
+  PWMD12.tim->CCER  = ccer;
+  PWMD12.tim->SR    = 0;
+
+  PWMD12.tim->CR1   = STM32_TIM_CR1_ARPE | STM32_TIM_CR1_CEN;
+
+  PWMD12.state = PWM_READY;
+}
+
+void PWM12_setWidth(const uint8_t id, const uint16_t width)
+{
+  if(id < 2)
+    PWMD12.tim->CCR[id] = width;
+}
 
 /**
   *   @brief Check whether the 24V power is on

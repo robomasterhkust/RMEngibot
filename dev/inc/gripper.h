@@ -31,6 +31,7 @@ static const int16_t gripper_output_max[GRIPPER_MOTOR_NUM] = {15000, 16384};
 #include "chassis.h"
 
 motorPosStruct* gripper_get(void);
+gripper_state_t gripper_getError(void);
 void gripper_init(void);
 void gripper_kill(void);
 bool gripper_inPosition(const uint8_t id);

@@ -70,6 +70,8 @@
 #define PN5_TOGGLE()    (palTogglePad(GPIOH, GPIOH_PNEUMATICS5))
 #define PN6_TOGGLE()    (palTogglePad(GPIOI, GPIOI_PNEUMATICS6))
 
+#define BUZZER(width) (PWMD12.tim->CCR[0] = width)
+
 /**
  * @brief   Enables the PAL subsystem.
  */

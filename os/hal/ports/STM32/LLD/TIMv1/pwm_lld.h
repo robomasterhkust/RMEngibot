@@ -523,6 +523,10 @@ extern PWMDriver PWMD8;
 extern PWMDriver PWMD9;
 #endif
 
+#if STM32_PWM_USE_TIM12 && !defined(__DOXYGEN__)
+extern PWMDriver PWMD12;
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

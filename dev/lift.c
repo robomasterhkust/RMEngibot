@@ -138,52 +138,54 @@ void lift_calibrate(void)
 
   // uint8_t init_state = 0;
 
-  pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 5000));
+  BUZZER(500);
   chThdSleepMilliseconds(500);
-  pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 0));
+  BUZZER(0);
   chThdSleepMilliseconds(500);
-  pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 5000));
+  BUZZER(500);
   chThdSleepMilliseconds(500);
-  pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 0));
+  BUZZER(0);
   chThdSleepMilliseconds(500);
-  pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 5000));
+  BUZZER(500);
   chThdSleepMilliseconds(500);
-  pwmEnableChannel(&PWMD3, 0, PWM_PERCENTAGE_TO_WIDTH(&PWMD3, 0));
+  BUZZER(0);
   chThdSleepMilliseconds(500);
 
-  // while(init_state < 0x0f)
-  // {
-  //   if(!LS2_DOWN())
-  //     motors[0].pos_sp+= 0.02f;
-  //   else
-  //   {
-  //     init_state |= 0x01;
-  //     offset[0] = motors[0]._pos;
-  //   }
-  //   if(!LS1_DOWN())
-  //     motors[1].pos_sp+= 0.02f;
-  //   else
-  //   {
-  //     init_state |= 0x02;
-  //     offset[1] = motors[1]._pos;
-  //   }
-  //   if(!LS0_DOWN())
-  //     motors[2].pos_sp+= 0.02f;
-  //   else
-  //   {
-  //     init_state |= 0x04;
-  //     offset[2] = motors[2]._pos;
-  //   }
-  //   if(!LS3_DOWN())
-  //     motors[3].pos_sp+= 0.02f;
-  //   else
-  //   {
-  //     init_state |= 0x08;
-  //     offset[3] = motors[3]._pos;
-  //   }
+  #ifdef LIFT_USE_LS
+   while(init_state < 0x0f)
+   {
+     if(!LS2_DOWN())
+       motors[0].pos_sp+= 0.02f;
+     else
+     {
+       init_state |= 0x01;
+       offset[0] = motors[0]._pos;
+     }
+     if(!LS1_DOWN())
+       motors[1].pos_sp+= 0.02f;
+     else
+     {
+       init_state |= 0x02;
+       offset[1] = motors[1]._pos;
+     }
+     if(!LS0_DOWN())
+       motors[2].pos_sp+= 0.02f;
+     else
+     {
+       init_state |= 0x04;
+       offset[2] = motors[2]._pos;
+     }
+     if(!LS3_DOWN())
+       motors[3].pos_sp+= 0.02f;
+     else
+     {
+       init_state |= 0x08;
+       offset[3] = motors[3]._pos;
+     }
 
-  //   chThdSleepMilliseconds(2);
-  //}
+     chThdSleepMilliseconds(2);
+  }
+  #endif
 
   bool init_state[LIFT_MOTOR_NUM] = {0, 0,0,0};
 

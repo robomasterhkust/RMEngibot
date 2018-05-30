@@ -26,6 +26,7 @@
 #include "gripper.h"
 
 #include "exti.h"
+#include "judge.h"
 #include "imu_temp.h"
 #include "sdlog.h"
 
@@ -33,5 +34,8 @@ void shellStart(void);
 
 bool power_check(void);
 bool power_failure(void);
+
+void PWM12_start(void);
+void PWM12_setWidth(const uint8_t id, const uint16_t width);
 
 #endif
