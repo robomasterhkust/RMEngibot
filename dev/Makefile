@@ -132,7 +132,7 @@ CSRC = $(STARTUPSRC) \
        canBusProcess.c dbus.c params.c usbcfg.c \
        calibrate_sensor.c\
        exti.c imu_temp.c chassis.c lift.c island_ground.c\
-       adis16265.c sdlog.c rangefinder.c gripper.c
+       adis16265.c sdlog.c rangefinder.c gripper.c judge.c
 
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global

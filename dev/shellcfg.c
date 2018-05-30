@@ -8,8 +8,8 @@
 #include <string.h>
 #include "rangefinder.h"
 #include "island.h"
-#define SERIAL_CMD       &SDU1
-#define SERIAL_DATA      &SDU1
+#define SERIAL_CMD       &SD3
+#define SERIAL_DATA      &SD3
 
 static thread_t* matlab_thread_handler = NULL;
 /**
@@ -114,7 +114,9 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   chprintf(chp, "Yaw: %f\r\n", pIMU->euler_angle[Yaw]);
 
 
-  chprintf(chp,"State: %x\r\n",  chassis->state);
+  chprintf(chp,"Chassis State: %x\r\n",  chassis->state);
+
+  chprintf(chp,"island State: %x\r\n",   island_getRobotState());
 
   chprintf(chp, "ChassisError: %x\r\n", chassis_getError());
   chprintf(chp, "LiftError: %x\r\n", lift_getError());
@@ -260,6 +262,15 @@ void cmd_gyro(BaseSequentialStream * chp, int argc, char *argv[])
       chprintf(chp,"Angle: %f\n", _pGyro->angle);
 }
 
+void cmd_lift_check(BaseSequentialStream * chp, int argc, char *argv[]){
+  (void) argc,argv;
+  motorPosStruct* lifts = lift_get();
+  chprintf(chp,"lift1 :%f\r\n", lifts[0].pos_sp);
+  chprintf(chp,"lift2 :%f\r\n", lifts[1].pos_sp);
+  chprintf(chp,"lift3 :%f\r\n", lifts[2].pos_sp);
+  chprintf(chp,"lift4 :%f\r\n", lifts[3].pos_sp);
+  
+}
 
 /**
  * @brief array of shell commands, put the corresponding command and functions below
@@ -273,6 +284,7 @@ static const ShellCommand commands[] =
   {"temp", cmd_temp},
   {"gyro", cmd_gyro},
   {"WTF", cmd_error},
+  {"lift_check",cmd_lift_check},
   {"\xEE", cmd_data},
   #ifdef PARAMS_USE_USB
     {"\xFD",cmd_param_scale},
@@ -296,27 +308,33 @@ static const ShellConfig shell_cfg1 =
  *
  * @api
  */
+static const SerialConfig SERIAL_CMD_CONFIG = {
+  115200,               //Baud Rate
+  USART_CR1_UE,         //CR1 Register
+  USART_CR2_LINEN,      //CR2 Register
+  0                     //CR3 Register
+};
 void shellStart(void)
 {
-  //sdStart(SERIAL_CMD, NULL);
+  sdStart(SERIAL_CMD, &SERIAL_CMD_CONFIG);
   /*
    * Initializes a serial-over-USB CDC driver.
    */
-  sduObjectInit(&SDU1);
-  sduStart(&SDU1, &serusbcfg);
+  // sduObjectInit(&SDU1);
+  // sduStart(&SDU1, &serusbcfg);
 
-  /*
-   * Activates the USB driver and then the USB bus pull-up on D+.
-   * Note, a delay is inserted in order to not have to disconnect the cable
-   * after a reset.
-   */
+  
+  //  * Activates the USB driver and then the USB bus pull-up on D+.
+  //  * Note, a delay is inserted in order to not have to disconnect the cable
+  //  * after a reset.
+   
 
 
-  usbDisconnectBus(serusbcfg.usbp);
-  chThdSleepMilliseconds(1500);
+  // usbDisconnectBus(serusbcfg.usbp);
+  // chThdSleepMilliseconds(1500);
 
-  usbStart(serusbcfg.usbp, &usbcfg);
-  usbConnectBus(serusbcfg.usbp);
+  // usbStart(serusbcfg.usbp, &usbcfg);
+  // usbConnectBus(serusbcfg.usbp);
 
   shellInit();
 

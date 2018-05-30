@@ -44,24 +44,49 @@ volatile ChassisEncoder_canStruct* can_getExtraMotor(void)
   return extra_encoder;
 }
 
+#define CAN_ENCODER_RADIAN_RATIO    7.669904e-4f    // 2*M_PI / 0x2000
 static inline void can_processChassisEncoder
   (volatile ChassisEncoder_canStruct* cm, const CANRxFrame* const rxmsg)
 {
+  uint16_t prev_angle = cm->raw_angle;
+
+
   chSysLock();
   cm->updated = true;
   cm->raw_angle = (uint16_t)(rxmsg->data8[0]) << 8 | rxmsg->data8[1];
   cm->raw_speed = (int16_t)(rxmsg->data8[2]) << 8 | rxmsg->data8[3];
+  cm->act_current = (int16_t)(rxmsg->data8[4]) << 8 | rxmsg->data8[5];
+  cm->temperature = (uint8_t)rxmsg->data8[6];
+
+
+  if      (cm->raw_angle - prev_angle >  CAN_ENCODER_RANGE / 2) cm->round_count--;
+  else if (cm->raw_angle - prev_angle < -CAN_ENCODER_RANGE / 2) cm->round_count++;
+
+  cm->total_ecd = cm->round_count * CAN_ENCODER_RANGE + cm->raw_angle;
+  cm->radian_angle = cm->total_ecd * CAN_ENCODER_RADIAN_RATIO;
+
+
   chSysUnlock();
 }
 
 static inline void can_processGimbalEncoder
   (volatile GimbalEncoder_canStruct* gm, const CANRxFrame* const rxmsg)
 {
+  uint16_t prev_angle = gm->raw_angle;
+
   chSysLock();
   gm->updated = true;
   gm->raw_angle        = (uint16_t)(rxmsg->data8[0]) << 8 | rxmsg->data8[1];
   gm->raw_current      = (int16_t)((rxmsg->data8[2]) << 8 | rxmsg->data8[3]);
   gm->current_setpoint = (int16_t)((rxmsg->data8[4]) << 8 | rxmsg->data8[5]);
+  
+
+  if      (gm->raw_angle - prev_angle >  CAN_ENCODER_RANGE / 2) gm->round_count--;
+  else if (gm->raw_angle - prev_angle < -CAN_ENCODER_RANGE / 2) gm->round_count++;
+
+  gm->radian_angle = ((float)gm->round_count * CAN_ENCODER_RANGE + gm->raw_angle)
+                      * CAN_ENCODER_RADIAN_RATIO;
+
   chSysUnlock();
 }
 

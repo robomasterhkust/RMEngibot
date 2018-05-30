@@ -58,12 +58,13 @@ static void gripper_encoderUpdate(void)
       float pos_input = gripper_encoders[i].raw_angle*GRIPPER_ANGLE_PSC;
       float speed_input = gripper_encoders[i].raw_speed/ gripper_gear_ratio[i];
 
-      if((motors[i]._prev < 0.6f && pos_input > 5.68f) ||
-        (speed_input < -80.0f && pos_input > motors[i]._prev))
-        motors[i].rev--;
-      if((motors[i]._prev > 5.68f && pos_input < 0.6f) ||
-        (speed_input > 80.0f && pos_input < motors[i]._prev))
-        motors[i].rev++;
+      // if((motors[i]._prev < 0.6f && pos_input > 5.68f) ||
+      //   (speed_input < -80.0f && pos_input > motors[i]._prev))
+      //   motors[i].rev--;
+      // if((motors[i]._prev > 5.68f && pos_input < 0.6f) ||
+      //   (speed_input > 80.0f && pos_input < motors[i]._prev))
+      //   motors[i].rev++;
+      motors[i].rev = gripper_encoders[i].round_count;
 
       motors[i]._prev = pos_input;
       pos_input += motors[i].rev * 2*M_PI;
@@ -209,11 +210,12 @@ void gripper_calibrate(void)
       }
 
       init_count += init_state[i] ? 1 : 0;
+      if(count == 0 && init_state[0] == true){
+        ++count;
+        motors[0].pos_sp = offset[0] - 0.1f;
+      }
     }
-    if(count == 0 && init_state[0] == true){
-      ++count;
-      motors[0].pos_sp = offset[0] - 0.1f;
-    }
+    
     chThdSleepMilliseconds(2);
   }
   motors[1].pos_sp = offset[1] - 0.1f;
