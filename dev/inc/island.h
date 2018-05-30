@@ -7,9 +7,9 @@
 #define ISLAND_ACCL_LIMIT_LOW    1.0f
 #define ISLAND_ACCL_LIMIT_HIGH   4.0f
 
-#define ROBOT_STATE_NUM  19U
+#define ROBOT_STATE_NUM  18U
 typedef enum {
-  STATE_GROUND,
+  STATE_GROUND = 0,
   STATE_TEST,
   STATE_ONFOOT,
   STATE_ROLLER_IN,
@@ -26,8 +26,7 @@ typedef enum {
   STATE_HERO_INTERACT_2,
   STATE_HERO_INTERACT_3,
   STATE_RUSHDOWN_1,
-  STATE_RUSHDOWN_2,
-  STATE_RUSHDOWN_3
+  STATE_RUSHDOWN_2
 } robot_state_t;
 
 typedef enum {

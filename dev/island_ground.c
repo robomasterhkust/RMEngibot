@@ -300,6 +300,7 @@ static THD_FUNCTION(Island_thread, p)
         #endif
 
         chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_HIGH);
+        chassis_setAcclLimit(ISLAND_SPEED_LIMIT_HIGH);
 
         if(island_state == STATE_STAIR_1 || island_state == STATE_STAIR_2)
         {
