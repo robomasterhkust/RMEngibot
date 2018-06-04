@@ -220,7 +220,7 @@ static THD_FUNCTION(uart_dbus_thread, p)
       timeout = MS2ST(DBUS_INIT_WAIT_TIME_MS);
     }
 
-    RC_txCan(DBUS_CAN, CAN_DBUS_ID);
+    //RC_txCan(DBUS_CAN, CAN_DBUS_ID);
 
     //Control the flashing of green LED // Shift to Error.c
     if(!(count % 25))
