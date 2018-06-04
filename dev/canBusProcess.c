@@ -90,8 +90,22 @@ static inline void can_processGimbalEncoder
   chSysUnlock();
 }
 
+static inline void  can_processSendDbusEncoder
+        (volatile RC_Ctl_t* pRC, const CANRxFrame* const rxmsg)
+{
+    chSysLock();
+    pRC->rc.channel0 = rxmsg->data16[0];
+    pRC->rc.channel1 = rxmsg->data16[1];
+    pRC->rc.channel2 = rxmsg->data16[2];
+    pRC->rc.channel3 = rxmsg->data16[3];
+    chSysUnlock();
+}
+
+static RC_Ctl_t* pRC;
 static void can_processEncoderMessage(CANDriver* const canp, const CANRxFrame* const rxmsg)
 {
+
+
   if(canp == &CAND1)
   {
     switch(rxmsg->SID)
@@ -113,6 +127,9 @@ static void can_processEncoderMessage(CANDriver* const canp, const CANRxFrame* c
           break;
         case CAN_GIMBAL_PITCH_FEEDBACK_MSG_ID:
           can_processGimbalEncoder(&gimbal_encoder[GIMBAL_PITCH] ,rxmsg);
+          break;
+        case CAN_GIMBAL_SEND_DBUS_ID:
+          can_processSendDbusEncoder(pRC,rxmsg);
           break;
     }
   }
@@ -213,7 +230,7 @@ void can_processInit(void)
   memset((void *)gimbal_encoder,  0, sizeof(GimbalEncoder_canStruct) *GIMBAL_MOTOR_NUM);
   memset((void *)chassis_encoder, 0, sizeof(ChassisEncoder_canStruct)*CHASSIS_MOTOR_NUM);
   memset((void *)extra_encoder, 0, sizeof(ChassisEncoder_canStruct)*EXTRA_MOTOR_NUM);
-
+  pRC = RC_get();
   uint8_t i;
   for (i = 0; i < CAN_FILTER_NUM; i++)
   {
