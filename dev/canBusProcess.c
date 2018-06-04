@@ -128,9 +128,9 @@ static void can_processEncoderMessage(CANDriver* const canp, const CANRxFrame* c
         case CAN_GIMBAL_PITCH_FEEDBACK_MSG_ID:
           can_processGimbalEncoder(&gimbal_encoder[GIMBAL_PITCH] ,rxmsg);
           break;
-        case CAN_GIMBAL_SEND_DBUS_ID:
-          can_processSendDbusEncoder(pRC,rxmsg);
-          break;
+        //case CAN_GIMBAL_SEND_DBUS_ID:
+          //can_processSendDbusEncoder(pRC,rxmsg);
+          //break;
     }
   }
   else

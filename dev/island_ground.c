@@ -161,7 +161,8 @@ static THD_FUNCTION(Island_thread, p)
             start_yaw = pIMU->euler_angle[Yaw];
             island_robotSetState(STATE_ROLLER_IN);
             roller_in_start = chVTGetSystemTimeX();
-            chassis_headingLockCmd(ENABLE);
+            //no gyro, disable this 
+            chassis_headingLockCmd(DISABLE);
           }
           else if(
                   island_state == STATE_STAIR_1 &&

@@ -127,7 +127,7 @@ int main(void) {
   gyro_init();
   rangeFinder_init();
   attitude_init();
-  //RC_init();
+  RC_init();
   judgeinit();
   while(!power_check())
   {
