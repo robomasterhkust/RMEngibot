@@ -76,6 +76,17 @@ typedef struct{
 		}keyboard;
 }RC_Ctl_t;
 
+
+typedef struct{
+    uint16_t channel0;
+    uint16_t channel1;
+    uint16_t channel2;
+    uint16_t channel3;
+
+}dbus_tx_canStruct;
+
+#define DBUS_CAN 				 &CAND1
+
 RC_Ctl_t* RC_get(void);
 void RC_init(void);
 

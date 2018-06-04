@@ -6,7 +6,7 @@
 
 #include "ch.h"
 #include "hal.h"
-
+#include "canBusProcess.h"
 #include "dbus.h"
 //#include "chprintf.h"
 //static BaseSequentialStream* chp = (BaseSequentialStream*)SERIAL_CMD;
@@ -141,6 +141,30 @@ static void RC_reset(void)
   RC_Ctl.keyboard.key_code=0;
 }
 
+
+static inline void RC_txCan(CANDriver *const CANx, const uint16_t SID)
+{
+  CANTxFrame txmsg;
+  dbus_tx_canStruct txCan;
+
+  txmsg.IDE = CAN_IDE_STD;
+  txmsg.SID = CAN_DBUS_ID;
+  txmsg.RTR = CAN_RTR_DATA;
+  txmsg.DLC = 0x08;
+
+  chSysLock();
+  txCan.channel0 = RC_Ctl.rc.channel0;
+  txCan.channel1 = RC_Ctl.rc.channel1;
+  txCan.channel2 = RC_Ctl.rc.channel2;
+  txCan.channel3 = RC_Ctl.rc.channel3;
+  
+
+  memcpy(&(txmsg.data8), &txCan ,8);
+  chSysUnlock();
+
+  canTransmit(CANx, CAN_ANY_MAILBOX, &txmsg, MS2ST(100));
+}
+
 #define  DBUS_INIT_WAIT_TIME_MS      4U
 #define  DBUS_WAIT_TIME_MS         100U
 static THD_WORKING_AREA(uart_dbus_thread_wa, 512);
@@ -195,6 +219,8 @@ static THD_FUNCTION(uart_dbus_thread, p)
       RC_reset();
       timeout = MS2ST(DBUS_INIT_WAIT_TIME_MS);
     }
+
+    RC_txCan(DBUS_CAN, CAN_DBUS_ID);
 
     //Control the flashing of green LED // Shift to Error.c
     if(!(count % 25))
