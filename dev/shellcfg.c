@@ -158,22 +158,20 @@ void cmd_error(BaseSequentialStream * chp, int argc, char *argv[])
 {
   uint32_t error = chassis_getError();
   if(error)
-    chprintf(chp,"CHASSIS ERROR: %X\r\n", error);
+    chprintf(chp,"CHASSIS CONNECTION ERROR: %X\r\n", error);
 
   error = lift_getError();
   if(error)
-    chprintf(chp,"LIFT ERROR:    %X\r\n", error);
+    chprintf(chp,"LIFT CONNECTION ERROR: %X\r\n", error);
+
+  chprintf(chp, "GRIPPER CONNECTION ERROR: %X\r\n",gripper_getError());
 
   chassisStruct* chassis = chassis_get();
 
-  chprintf(chp,"Chassis State: %x\r\n",  chassis->state);
-  chprintf(chp,"island State: %x\r\n",   island_getRobotState());
+  chprintf(chp,"Chassis State: %X\r\n",  chassis->state);
+  chprintf(chp,"island State: %X\r\n",   island_getRobotState());
 
-  chprintf(chp, "ChassisError: %x\r\n", chassis_getError());
-  chprintf(chp, "LiftError: %x\r\n", lift_getError());
-  chprintf(chp, "Gripper Error:%x\r\n",gripper_getError());
-
-  LEDR_OFF();
+  system_clearWarningFlag();
 }
 
 /**

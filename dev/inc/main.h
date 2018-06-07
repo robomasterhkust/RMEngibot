@@ -7,6 +7,7 @@
 #include "usbcfg.h"
 #include "flash.h"
 #include "chprintf.h"
+#include "system_error.h"
 
 #include "math_misc.h"
 #include "canBusProcess.h"

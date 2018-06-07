@@ -1,7 +1,7 @@
 /**
- * Edward ZHANG, Terry ZENG, 201709??
+ * Edward ZHANG, Terry ZENG, 20180304
  * @file    dbus.c
- * @brief   Dbus driver and decoder
+ * @brief   Dbus driver and decoder with keyboard and mouse support and safe lock
  */
 
 #include "ch.h"
@@ -16,9 +16,14 @@ static RC_Ctl_t RC_Ctl;
 static thread_reference_t uart_dbus_thread_handler = NULL;
 static uint8_t rx_start_flag = 1;
 
+#if defined (RM_INFANTRY) || defined (RM_HERO)
+  static bool rc_can_flag = false;
+#endif
+
+static rc_state_t rc_state = RC_UNCONNECTED;;
+
 #ifdef RC_SAFE_LOCK
   systime_t update_time;
-  rc_lock_state_t lock_state;
 #endif
 
 /**
@@ -40,14 +45,14 @@ static void decryptDBUS(void)
 
 
   RC_Ctl.mouse.x = rxbuf[6] | (rxbuf[7] << 8);                   //!< Mouse X axis
-  RC_Ctl.mouse.y = rxbuf[8] | (rxbuf[9] << 8);                   //!< Mouse Y axis
-  RC_Ctl.mouse.z = rxbuf[10] | (rxbuf[11] << 8);                 //!< Mouse Z axis
+  RC_Ctl.mouse.y = rxbuf[8] | (rxbuf[9] << 8);                   //!< Mouse RC_LOCKEDY axis
+  RC_Ctl.mouse.z = rxbuf[10] | (rxbuf[11] << 8);               //!< Mouse Z axis
   RC_Ctl.mouse.LEFT = rxbuf[12];                                       //!< Mouse Left Is Press ?
   RC_Ctl.mouse.RIGHT = rxbuf[13];                                       //!< Mouse Right Is Press ?
   RC_Ctl.keyboard.key_code = rxbuf[14] | (rxbuf[15] << 8);                   //!< KeyBoard value
 
   #ifdef RC_SAFE_LOCK
-    if(lock_state == RC_UNLOCKED &&
+    if(rc_state == RC_UNLOCKED &&
         (RC_Ctl.rc.channel0 != RC_CH_VALUE_OFFSET ||
          RC_Ctl.rc.channel1 != RC_CH_VALUE_OFFSET ||
          RC_Ctl.rc.channel2 != RC_CH_VALUE_OFFSET ||
@@ -56,22 +61,24 @@ static void decryptDBUS(void)
          RC_Ctl.rc.s2 != prev_s2)
       )
       update_time = chVTGetSystemTimeX();
-    else if(lock_state == RC_LOCKED
+    else if(rc_state == RC_LOCKED
       && RC_Ctl.rc.channel0 > RC_CH_VALUE_MAX - 5
       && RC_Ctl.rc.channel1 < RC_CH_VALUE_MIN + 5
       && RC_Ctl.rc.channel2 < RC_CH_VALUE_MIN + 5
       && RC_Ctl.rc.channel3 < RC_CH_VALUE_MIN + 5)
-      lock_state = RC_UNLOCKING;
+      rc_state = RC_UNLOCKING;
 
-    else if(lock_state == RC_UNLOCKING
+    else if(rc_state == RC_UNLOCKING
       && RC_Ctl.rc.channel0 > RC_CH_VALUE_OFFSET - 5 && RC_Ctl.rc.channel0 < RC_CH_VALUE_OFFSET + 5
       && RC_Ctl.rc.channel1 > RC_CH_VALUE_OFFSET - 5 && RC_Ctl.rc.channel1 < RC_CH_VALUE_OFFSET + 5
       && RC_Ctl.rc.channel2 > RC_CH_VALUE_OFFSET - 5 && RC_Ctl.rc.channel2 < RC_CH_VALUE_OFFSET + 5
       && RC_Ctl.rc.channel3 > RC_CH_VALUE_OFFSET - 5 && RC_Ctl.rc.channel3 < RC_CH_VALUE_OFFSET + 5)
     {
       update_time = chVTGetSystemTimeX();
-      lock_state = RC_UNLOCKED;
+      rc_state = RC_UNLOCKED;
     }
+  #else
+    rc_state = RC_UNLOCKED;
   #endif
 }
 
@@ -110,6 +117,14 @@ RC_Ctl_t* RC_get(void)
 }
 
 /**
+ * @brief   Return the RC_Ctl struct
+ */
+rc_state_t RC_getState(void)
+{
+  return rc_state;
+}
+
+/**
  * @brief Reset RC controller
  * @NOTE  This function is also used as safe lock mechanism for RC controller
  *        S2 is not flushed because it is used to unlock the RC controller
@@ -127,10 +142,6 @@ static void RC_reset(void)
 {
   RC_RCreset();
 
-  #ifdef RC_SAFE_LOCK
-    lock_state = RC_LOCKED;
-  #endif
-
   RC_Ctl.rc.s1 =0;
   RC_Ctl.rc.s2 = 0;
   RC_Ctl.mouse.LEFT=0;
@@ -140,6 +151,38 @@ static void RC_reset(void)
   RC_Ctl.mouse.z=0;
   RC_Ctl.keyboard.key_code=0;
 }
+
+#if defined (RM_INFANTRY) || defined (RM_HERO)
+static inline void RC_txCan(CANDriver *const CANx, const uint16_t SID)
+{
+  CANTxFrame txmsg;
+  dbus_tx_canStruct txCan;
+
+  txmsg.IDE = CAN_IDE_STD;
+  txmsg.SID = CAN_DBUS_ID;
+  txmsg.RTR = CAN_RTR_DATA;
+  txmsg.DLC = 0x08;
+
+  chSysLock();
+  txCan.channel0 = RC_Ctl.rc.channel0;
+  txCan.channel1 = RC_Ctl.rc.channel1;
+  txCan.s1 = RC_Ctl.rc.s1;
+  txCan.s2 = RC_Ctl.rc.s2;
+  txCan.key_code = RC_Ctl.keyboard.key_code;
+
+  memcpy(&(txmsg.data8), &txCan ,8);
+  chSysUnlock();
+
+  canTransmit(CANx, CAN_ANY_MAILBOX, &txmsg, MS2ST(100));
+}
+#endif
+
+#if defined (RM_INFANTRY) || defined (RM_HERO)
+void RC_canTxCmd(const uint8_t cmd)
+{
+  rc_can_flag = (cmd == DISABLE ? false : true);
+}
+#endif
 
 #define  DBUS_INIT_WAIT_TIME_MS      4U
 #define  DBUS_WAIT_TIME_MS         100U
@@ -152,9 +195,7 @@ static THD_FUNCTION(uart_dbus_thread, p)
   uartStart(UART_DBUS, &uart_cfg);
   dmaStreamRelease(*UART_DBUS.dmatx);
 
-  size_t rx_size;
   msg_t rxmsg;
-  bool rxflag = false;
   systime_t timeout = MS2ST(DBUS_INIT_WAIT_TIME_MS);
   uint32_t count = 0;
 
@@ -169,10 +210,14 @@ static THD_FUNCTION(uart_dbus_thread, p)
 
     if(rxmsg == MSG_OK)
     {
-      if(!rxflag)
+      if(!rc_state)
       {
         timeout = MS2ST(DBUS_WAIT_TIME_MS);
-        rxflag = true;
+        #ifdef RC_SAFE_LOCK
+          rc_state = RC_LOCKED;
+        #else
+          rc_state = RC_UNLOCKED;
+        #endif
       }
       else
       {
@@ -180,10 +225,10 @@ static THD_FUNCTION(uart_dbus_thread, p)
         decryptDBUS();
 
         #ifdef RC_SAFE_LOCK
-          if(lock_state != RC_UNLOCKED)
+          if(rc_state != RC_UNLOCKED)
             RC_RCreset();
           else if(chVTGetSystemTimeX() > update_time + S2ST(RC_LOCK_TIME_S))
-            lock_state = RC_LOCKED;
+            rc_state = RC_LOCKED;
         #endif
 
         chSysUnlock();
@@ -191,29 +236,15 @@ static THD_FUNCTION(uart_dbus_thread, p)
     }
     else
     {
-      rxflag = false;
+      rc_state = RC_UNCONNECTED;
       RC_reset();
       timeout = MS2ST(DBUS_INIT_WAIT_TIME_MS);
     }
 
-    //Control the flashing of green LED // Shift to Error.c
-    if(!(count % 25))
-    {
-      uint32_t blink_count = count / 25;
-      if(!(blink_count % 8))
-        LEDB_OFF();
-      if(!rxflag ||
-          (
-           #ifdef RC_SAFE_LOCK
-             (lock_state != RC_UNLOCKED && (blink_count % 8 < 2)) ||
-             (lock_state == RC_UNLOCKED && (blink_count % 8 < 4))
-           #else
-             (blink_count % 8 < 4)
-           #endif
-          )
-        )
-        LEDG_TOGGLE();
-    }
+    #if defined (RM_INFANTRY) || defined (RM_HERO)
+      if(rc_can_flag)
+        RC_txCan(DBUS_CAN, CAN_DBUS_ID);
+    #endif
 
     count++;
   }

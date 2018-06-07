@@ -5,6 +5,8 @@
 #include "canBusProcess.h"
 #include <math.h>
 
+#include "system_error.h"
+
 static ChassisEncoder_canStruct* gripper_encoders;
 static volatile motorPosStruct motors[GRIPPER_MOTOR_NUM];
 static float offset[GRIPPER_MOTOR_NUM];
@@ -23,7 +25,7 @@ motorPosStruct* gripper_get(void)
 
 void gripper_kill(void)
 {
-  LEDR_ON();
+  system_setWarningFlag();
   gripper_state = GRIPPER_ERROR;
   can_motorSetCurrent(GRIPPER_CAN, GRIPPER_CAN_EID, 0, 0, 0, 0);
 }
