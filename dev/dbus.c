@@ -201,7 +201,7 @@ static THD_FUNCTION(uart_dbus_thread, p)
     {
       uint32_t blink_count = count / 25;
       if(!(blink_count % 8))
-        LEDB_OFF();
+        LEDG_OFF();
       if(!rxflag ||
           (
            #ifdef RC_SAFE_LOCK

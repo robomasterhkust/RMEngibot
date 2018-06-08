@@ -124,8 +124,8 @@ static THD_FUNCTION(Island_thread, p)
         chassis_headingLockCmd(DISABLE);
         chassis_killAutoDriver();
 
-        lift_changePos(47.0f - pos_cmd, 47.0f - pos_cmd ,
-                      47.0f - pos_cmd, 47.0f - pos_cmd);
+        lift_changePos(40.0f - pos_cmd, 40.0f - pos_cmd ,
+                      40.0f - pos_cmd, 40.0f - pos_cmd);
 
         if(S2 == ASCEND_MODE && (s1_reset && island_ascend()))
         {
