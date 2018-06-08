@@ -13,6 +13,7 @@ static volatile GimbalEncoder_canStruct  gimbal_encoder[GIMBAL_MOTOR_NUM];
 static volatile ChassisEncoder_canStruct chassis_encoder[CHASSIS_MOTOR_NUM];
 static volatile ChassisEncoder_canStruct extra_encoder[EXTRA_MOTOR_NUM];
 
+static volatile Gimbal_Send_Dbus_canStruct gimbal_send_dbus;
 /*
  * 500KBaud, automatic wakeup, automatic recover
  * from abort mode.
@@ -91,17 +92,17 @@ static inline void can_processGimbalEncoder
 }
 
 static inline void  can_processSendDbusEncoder
-        (volatile RC_Ctl_t* pRC, const CANRxFrame* const rxmsg)
+        (volatile Gimbal_Send_Dbus_canStruct* db, const CANRxFrame* const rxmsg)
 {
     chSysLock();
-    pRC->rc.channel0 = rxmsg->data16[0];
-    pRC->rc.channel1 = rxmsg->data16[1];
-    pRC->rc.channel2 = rxmsg->data16[2];
-    pRC->rc.channel3 = rxmsg->data16[3];
+    db->channel0 = rxmsg->data16[0];
+    db->channel1 = rxmsg->data16[1];
+    db->s1       = rxmsg->data8[4];
+    db->s2       = rxmsg->data8[5];
+    db->key_code = rxmsg->data16[3];
     chSysUnlock();
 }
 
-static RC_Ctl_t* pRC;
 static void can_processEncoderMessage(CANDriver* const canp, const CANRxFrame* const rxmsg)
 {
 
@@ -128,9 +129,9 @@ static void can_processEncoderMessage(CANDriver* const canp, const CANRxFrame* c
         case CAN_GIMBAL_PITCH_FEEDBACK_MSG_ID:
           can_processGimbalEncoder(&gimbal_encoder[GIMBAL_PITCH] ,rxmsg);
           break;
-        //case CAN_GIMBAL_SEND_DBUS_ID:
-          //can_processSendDbusEncoder(pRC,rxmsg);
-          //break;
+        case CAN_GIMBAL_SEND_DBUS_ID:
+          can_processSendDbusEncoder(&gimbal_send_dbus,rxmsg);
+          break;
     }
   }
   else
@@ -230,7 +231,7 @@ void can_processInit(void)
   memset((void *)gimbal_encoder,  0, sizeof(GimbalEncoder_canStruct) *GIMBAL_MOTOR_NUM);
   memset((void *)chassis_encoder, 0, sizeof(ChassisEncoder_canStruct)*CHASSIS_MOTOR_NUM);
   memset((void *)extra_encoder, 0, sizeof(ChassisEncoder_canStruct)*EXTRA_MOTOR_NUM);
-  pRC = RC_get();
+  
   uint8_t i;
   for (i = 0; i < CAN_FILTER_NUM; i++)
   {

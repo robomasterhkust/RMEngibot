@@ -76,6 +76,15 @@ typedef struct {
   bool updated;
 } ChassisEncoder_canStruct;
 
+typedef struct{
+    uint16_t channel0;
+    uint16_t channel1;
+    uint8_t  s1;
+    uint8_t  s2;
+    uint16_t key_code;
+} Gimbal_Send_Dbus_canStruct;
+
+
 volatile GimbalEncoder_canStruct* can_getGimbalMotor(void);
 volatile ChassisEncoder_canStruct* can_getChassisMotor(void);
 volatile ChassisEncoder_canStruct* can_getExtraMotor(void);
