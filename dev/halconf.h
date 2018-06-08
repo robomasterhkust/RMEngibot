@@ -29,6 +29,7 @@
 #define _HALCONF_H_
 
 #include "mcuconf.h"
+#include "roboconf.h"
 
 #define CHPRINTF_USE_FLOAT TRUE
 

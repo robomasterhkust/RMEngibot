@@ -84,7 +84,7 @@ typedef struct{
 		}keyboard;
 }RC_Ctl_t;
 
-#if defined (RM_INFANTRY) || defined (RM_HERO)
+#if defined (RM_INFANTRY) || defined (RM_HERO) || defined(RM_ENGIN)
 	#include "canBusProcess.h"
 	#define DBUS_CAN 				 &CAND1
 	void RC_canTxCmd(const uint8_t cmd);

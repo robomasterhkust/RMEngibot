@@ -26,7 +26,7 @@
 #define CAN_GIMBAL_YAW_FEEDBACK_MSG_ID              0x205
 #define CAN_GIMBAL_PITCH_FEEDBACK_MSG_ID            0x206
 
-
+#define CAN_DBUS_ID                                 0x001
 #define CAN_GIMBAL_SEND_DBUS_ID                     0x001
 
 #define CAN_ENCODER_RANGE           8192            // 0x2000
@@ -75,6 +75,15 @@ typedef struct {
 
   bool updated;
 } ChassisEncoder_canStruct;
+
+typedef struct{
+    uint16_t channel0;
+    uint16_t channel1;
+    uint8_t  s1;
+    uint8_t  s2;
+    uint16_t key_code;
+} dbus_tx_canStruct;
+
 
 volatile GimbalEncoder_canStruct* can_getGimbalMotor(void);
 volatile ChassisEncoder_canStruct* can_getChassisMotor(void);

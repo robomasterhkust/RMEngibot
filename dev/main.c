@@ -130,6 +130,7 @@ int main(void) {
 //  extiinit(); //*
 
   /* Init sequence 2: sensors, comm*/
+  RC_canTxCmd(ENABLE);
   gyro_init();
   rangeFinder_init();
   attitude_init();
@@ -142,10 +143,10 @@ int main(void) {
   }
 
   /* Init sequence 3: actuators, display*/
-  chassis_init();
-  lift_init();
-//  gripper_init();
-  island_init();
+  //chassis_init();
+  //lift_init();
+  //gripper_init();
+  //island_init();
 
   wdgStart(&WDGD1, &wdgcfg); //Start the watchdog
 

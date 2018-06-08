@@ -6,7 +6,6 @@
 
 #include "ch.h"
 #include "hal.h"
-
 #include "dbus.h"
 //#include "chprintf.h"
 //static BaseSequentialStream* chp = (BaseSequentialStream*)SERIAL_CMD;
@@ -16,7 +15,7 @@ static RC_Ctl_t RC_Ctl;
 static thread_reference_t uart_dbus_thread_handler = NULL;
 static uint8_t rx_start_flag = 1;
 
-#if defined (RM_INFANTRY) || defined (RM_HERO)
+#if defined (RM_INFANTRY) || defined (RM_HERO) || defined(RM_ENGIN)
   static bool rc_can_flag = false;
 #endif
 
@@ -152,7 +151,7 @@ static void RC_reset(void)
   RC_Ctl.keyboard.key_code=0;
 }
 
-#if defined (RM_INFANTRY) || defined (RM_HERO)
+#if defined (RM_INFANTRY) || defined (RM_HERO) || defined(RM_ENGIN)
 static inline void RC_txCan(CANDriver *const CANx, const uint16_t SID)
 {
   CANTxFrame txmsg;
@@ -171,13 +170,14 @@ static inline void RC_txCan(CANDriver *const CANx, const uint16_t SID)
   txCan.key_code = RC_Ctl.keyboard.key_code;
 
   memcpy(&(txmsg.data8), &txCan ,8);
+
   chSysUnlock();
 
   canTransmit(CANx, CAN_ANY_MAILBOX, &txmsg, MS2ST(100));
 }
 #endif
 
-#if defined (RM_INFANTRY) || defined (RM_HERO)
+#if defined (RM_INFANTRY) || defined (RM_HERO) || defined (RM_ENGIN)
 void RC_canTxCmd(const uint8_t cmd)
 {
   rc_can_flag = (cmd == DISABLE ? false : true);
@@ -241,7 +241,7 @@ static THD_FUNCTION(uart_dbus_thread, p)
       timeout = MS2ST(DBUS_INIT_WAIT_TIME_MS);
     }
 
-    #if defined (RM_INFANTRY) || defined (RM_HERO)
+    #if defined (RM_INFANTRY) || defined (RM_HERO) || defined(RM_ENGIN)
       if(rc_can_flag)
         RC_txCan(DBUS_CAN, CAN_DBUS_ID);
     #endif
