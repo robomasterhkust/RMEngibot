@@ -6,6 +6,8 @@
 #include "canBusProcess.h"
 #include "math_misc.h"
 
+#include "system_error.h"
+
 #define LIFT_IN_POSITION_COUNT 50U
 #define LIFT_UPDATE_PERIOD_US  1000000/LIFT_CONTROL_FREQ
 
@@ -48,7 +50,7 @@ bool lift_inPosition(void)
 
 void lift_kill(void)
 {
-  LEDR_ON();
+  system_setWarningFlag();
 
   if(lift_state == LIFT_RUNNING)
   {

@@ -34,10 +34,18 @@
 #define KEY_W       0x0001
 
 typedef enum{
-	RC_LOCKED = 0,
+	RC_S_DUMMY = 0,
+	RC_S_UP = 1,
+	RC_S_DOWN = 2,
+	RC_S_MIDDLE = 3,
+} rc_switch_t;
+
+typedef enum{
+	RC_UNCONNECTED = 0,
+	RC_LOCKED,
 	RC_UNLOCKING,
 	RC_UNLOCKED
-} rc_lock_state_t;
+} rc_state_t;
 
 typedef struct{
 		struct{
@@ -76,6 +84,13 @@ typedef struct{
 		}keyboard;
 }RC_Ctl_t;
 
+#if defined (RM_INFANTRY) || defined (RM_HERO)
+	#include "canBusProcess.h"
+	#define DBUS_CAN 				 &CAND1
+	void RC_canTxCmd(const uint8_t cmd);
+#endif
+
+rc_state_t RC_getState(void);
 RC_Ctl_t* RC_get(void);
 void RC_init(void);
 

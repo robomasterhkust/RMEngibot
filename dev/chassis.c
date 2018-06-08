@@ -12,6 +12,8 @@
 #include "chassis.h"
 #include "math_misc.h"
 
+#include "system_error.h"
+
 static volatile chassisStruct chassis;
 pi_controller_t motor_vel_controllers[CHASSIS_MOTOR_NUM];
 pid_controller_t heading_controller;
@@ -78,7 +80,6 @@ void chassis_tempSuspend(const uint8_t cmd)
 
 static void chassis_kill(void)
 {
-  LEDR_ON();
   if(chassis.state & CHASSIS_RUNNING)
   {
     chassis.state = CHASSIS_ERROR;
@@ -171,7 +172,7 @@ static void chassis_encoderUpdate(void)
       chassis._motors[i]._wait_count++;
       if(chassis._motors[i]._wait_count > CHASSIS_CONNECTION_ERROR_COUNT)
       {
-        LEDR_ON();
+        system_setErrorFlag();
         chassis_kill();
 
         chassis.errorFlag |= CHASSIS0_NOT_CONNECTED << i;

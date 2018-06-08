@@ -51,11 +51,15 @@ static THD_FUNCTION(Attitude_thread, p)
   if(pIMU->temperature > 0.0f)
     tempControllerInit();
   else
+  {
+    system_setErrorFlag();
     pIMU->errorCode |= IMU_TEMP_ERROR;
+  }
 
   while(pIMU->temperature < 60.0f)
   {
     imuGetData(pIMU);
+    system_setTempWarningFlag();
     chThdSleepMilliseconds(50);
   }
 
@@ -72,6 +76,7 @@ static THD_FUNCTION(Attitude_thread, p)
     else
     {
       tick = chVTGetSystemTimeX();
+      //system_setTempWarningFlag();
       pIMU->errorCode |= IMU_LOSE_FRAME;
     }
 
@@ -119,6 +124,7 @@ int main(void) {
   shellStart();
   params_init();
   can_processInit();
+  system_error_init();
   PWM12_start();
 
 //  extiinit(); //*
@@ -131,13 +137,14 @@ int main(void) {
   judgeinit();
   while(!power_check())
   {
+    system_setTempWarningFlag();
     chThdSleepMilliseconds(100);
   }
 
   /* Init sequence 3: actuators, display*/
   chassis_init();
   lift_init();
-  gripper_init();
+//  gripper_init();
   island_init();
 
   wdgStart(&WDGD1, &wdgcfg); //Start the watchdog
