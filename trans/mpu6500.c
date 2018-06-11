@@ -9,7 +9,7 @@
 #include "hal.h"
 
 //#include "telemetry.h"
-#include "mpu6500.h"
+ 
 #include "flash.h"
 #include "math_misc.h"
 #include "chprintf.h"

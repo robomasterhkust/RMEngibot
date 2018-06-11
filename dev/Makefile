@@ -128,11 +128,11 @@ CSRC = $(STARTUPSRC) \
 			 $(CHIBIOS)/os/hal/lib/streams/memstreams.c \
        $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
        main.c shellcfg.c flash.c system_error.c\
-       mpu6500.c attitude.c ist8310.c math_misc.c \
+       attitude.c math_misc.c \
        canBusProcess.c dbus.c params.c usbcfg.c \
        calibrate_sensor.c\
-       exti.c imu_temp.c chassis.c lift.c island_ground.c\
-       adis16265.c sdlog.c rangefinder.c gripper.c judge.c
+       exti.c chassis.c lift.c island_ground.c\
+       adis16470.c sdlog.c rangefinder.c gripper.c judge.c
 
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global

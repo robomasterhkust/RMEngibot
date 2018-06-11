@@ -1,10 +1,10 @@
 #include "ch.h"
 #include "hal.h"
-
+#include "params.h"
 #include "gripper.h"
 #include "canBusProcess.h"
 #include <math.h>
-
+#include "math_misc.h"
 #include "system_error.h"
 
 static ChassisEncoder_canStruct* gripper_encoders;

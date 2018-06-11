@@ -14,9 +14,6 @@
 #include "dbus.h"
 #include "params.h"
 
-#include "mpu6500.h"
-#include "ist8310.h"
-#include "adis16265.h"
 #include "attitude.h"
 #include "calibrate_sensor.h"
 #include "rangefinder.h"
@@ -28,7 +25,7 @@
 
 #include "exti.h"
 #include "judge.h"
-#include "imu_temp.h"
+//#include "imu_temp.h"
 #include "sdlog.h"
 
 void shellStart(void);

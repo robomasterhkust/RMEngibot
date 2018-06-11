@@ -6,9 +6,9 @@
  */
 #include "ch.h"
 #include "hal.h"
-
+#include "params.h"
 #include "dbus.h"
-#include "mpu6500.h"
+ 
 #include "chassis.h"
 #include "math_misc.h"
 
@@ -452,7 +452,7 @@ void chassis_init(void)
 {
   memset(&chassis,0,sizeof(chassisStruct));
   pRC = RC_get();
-  pIMU = imu_get();
+  pIMU = adis16470_get();
 
   uint8_t i;
   params_set(&motor_vel_controllers[FRONT_LEFT], 9,2,FLvelName,subname_PI,PARAM_PUBLIC);
@@ -473,7 +473,7 @@ void chassis_init(void)
   chassis.heading_cmd = CHASSIS_DISABLE_AUTO;
 
 
-  chassis._pGyro = gyro_get();
+  
   chassis._encoders = can_getChassisMotor();
   chThdCreateStatic(chassis_control_wa, sizeof(chassis_control_wa),
                           NORMALPRIO, chassis_control, NULL);

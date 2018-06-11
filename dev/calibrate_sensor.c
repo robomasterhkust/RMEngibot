@@ -9,11 +9,9 @@
 #include "hal.h"
 #include "math_misc.h"
 
-#include "mpu6500.h"
-#include "adis16265.h"
 #include "usbcfg.h"
 #include "calibrate_sensor.h"
-//#include "flash.h"
+#include "flash.h"
 #include "chprintf.h"
 #include <string.h>
 
@@ -22,7 +20,6 @@ static BaseSequentialStream* chp = (BaseSequentialStream*)&SDU1;
 static uint8_t   side_data_collected[SIDE_COUNT_MAX] = { false, false, false, false, false, false };
 static uint8_t   side_complete_count          = 0;
 static uint8_t   detect_attempt               = 0;
-static uint8_t   calibration_state_record     = 0;
 
 static float accel_ref[SIDE_COUNT_MAX][3];
 
@@ -66,12 +63,15 @@ static enum detect_orientation_return detect_orientation(PIMUStruct pIMU)
     t_prev = t;
     float weight = (float)dt / (float)EMA_LEN;
 
-    float accelData[3], gyroData[3];
-    if(imuGetDataRaw(pIMU, accelData, gyroData) != IMU_OK)
-    {
-      chprintf(chp,"E:IMU Reading Error!\r\n");
-      return DETECT_ORIENTATION_ERROR;
-    }
+    int32_t accelRawData[3];
+    adis16470_get_accel_raw(accelRawData);
+
+    float accelData[3] = {
+      accelRawData[0] * ADIS16470_ACCEL_DATA_PSC_32,
+      accelRawData[1] * ADIS16470_ACCEL_DATA_PSC_32,
+      accelRawData[2] * ADIS16470_ACCEL_DATA_PSC_32
+    };
+
         // 2. calculate the exponential moving average and max-hold disperision
     for (i = 0; i < 3; i++)
     {
@@ -186,11 +186,11 @@ static enum detect_orientation_return detect_orientation(PIMUStruct pIMU)
 static uint8_t read_accelerometer_avg(PIMUStruct pIMU, const uint8_t orient, const uint32_t samples_num)
 {
   uint32_t counts = 0;
-  float    accel_sum[3] = { 0.0f, 0.0f, 0.0f};
+  float    accel_sum[3] = { 0 ,0 ,0};
 
   uint8_t i;
 
-  float accelData[3], gyroData[3];
+  int32_t accelRawData[3];
 
   const uint32_t sample_num_mod_20 = samples_num/20;
   uint32_t count_samplenum_20 = sample_num_mod_20;
@@ -198,11 +198,14 @@ static uint8_t read_accelerometer_avg(PIMUStruct pIMU, const uint8_t orient, con
 
   while (counts < samples_num)
   {
-    if(imuGetDataRaw(pIMU, accelData, gyroData) != IMU_OK)
-    {
-      chprintf(chp,"E:IMU Reading Error!\r\n");
-      return false;
-    }
+    adis16470_get_accel_raw(accelRawData);
+
+    float accelData[3] = {
+      accelRawData[0] * ADIS16470_ACCEL_DATA_PSC_32,
+      accelRawData[1] * ADIS16470_ACCEL_DATA_PSC_32,
+      accelRawData[2] * ADIS16470_ACCEL_DATA_PSC_32
+    };
+
     for (i = 0; i < 3; i++)
       accel_sum[i] += accelData[i];
     chThdSleepMilliseconds(1);
@@ -225,14 +228,17 @@ static uint8_t read_accelerometer_avg(PIMUStruct pIMU, const uint8_t orient, con
   return true;
 }
 
-static uint8_t read_gyrscope_avg(PIMUStruct pIMU, const uint32_t samples_num)
+#define GYRO_MOTION_TH            1.5e6 //~2deg/s
+static uint8_t read_gyrscope_avg(PIMUStruct pIMU, const uint32_t samples_num, int32_t gyroBias[3])
 {
   uint32_t counts = 0;
-  float    gyro_sum[3] = { 0.0f, 0.0f, 0.0f};
+  int64_t  gyro_sum[3] = { 0 ,0 ,0};
+
+  const int64_t GYRO_DISPLACEMENT_TH = GYRO_MOTION_TH / 4 * samples_num;
 
   uint8_t i;
 
-  float accelData[3], gyroData[3];
+  int32_t gyroRawData[3];
 
   const uint32_t sample_num_mod_20 = samples_num/20;
   uint32_t count_samplenum_20 = sample_num_mod_20;
@@ -240,13 +246,17 @@ static uint8_t read_gyrscope_avg(PIMUStruct pIMU, const uint32_t samples_num)
 
   while (counts < samples_num)
   {
-    if(imuGetDataRaw(pIMU, accelData, gyroData) != IMU_OK)
-    {
-      chprintf(chp,"\nE:IMU Reading Error!\r\n");
-      return false;
-    }
+    adis16470_get_gyro_raw(gyroRawData);
+
     for (i = 0; i < 3; i++)
-      gyro_sum[i] += gyroData[i];
+    {
+      gyro_sum[i] += gyroRawData[i];
+
+      //In case the gyro is moved during calibration
+      if(gyroRawData[i] > GYRO_MOTION_TH || gyroRawData[i] < -GYRO_MOTION_TH
+        || gyro_sum[i] > GYRO_DISPLACEMENT_TH || gyro_sum[i] < -GYRO_DISPLACEMENT_TH)
+        return false;
+    }
     chThdSleepMilliseconds(1);
     counts++;
 
@@ -260,7 +270,7 @@ static uint8_t read_gyrscope_avg(PIMUStruct pIMU, const uint32_t samples_num)
   chprintf(chp,"=\r\n");
 
   for (i = 0; i < 3; i++)
-    pIMU->_gyroBias[i] = -gyro_sum[i] / counts;
+    gyroBias[i] = -gyro_sum[i] / samples_num;
 
   return true;
 }
@@ -272,11 +282,12 @@ static uint8_t read_gyrscope_avg(PIMUStruct pIMU, const uint32_t samples_num)
  * @output accel_T matrixs for affine rotation
  * @output accel_offs vectors for offset calculation
  */
-static uint8_t calculate_calibration_values(PIMUStruct pIMU, float g)
+static uint8_t calculate_calibration_values(PIMUStruct pIMU, float g, int32_t accelBias[3])
 {
   uint8_t i, j;
   for (i = 0; i < 3; i++)
-    pIMU->_accelBias[i] = (accel_ref[i * 2][i] + accel_ref[i * 2 + 1][i]) / 2;
+    accelBias[i] = (int32_t)((accel_ref[i * 2][i] + accel_ref[i * 2 + 1][i])
+      / (2 * ADIS16470_ACCEL_DATA_PSC_32));
 
   /**
     * fill matrix A for linear equation A * x = b
@@ -284,6 +295,8 @@ static uint8_t calculate_calibration_values(PIMUStruct pIMU, float g)
     * x is the rotation matrix in Affine model
     * b is the reference matrix, [g 0 0; 0 g 0; 0 0 g] = eyes(3) * g
     */
+
+  /* NOTE: We are not measuring the alignment error of adis16470
   float mat_A[3][3];
 
   for (i = 0; i < 3; i++)
@@ -298,20 +311,26 @@ static uint8_t calculate_calibration_values(PIMUStruct pIMU, float g)
   for (i = 0; i < 3; i++)
     for (j = 0; j < 3; j++)
       pIMU->_accelT[i][j] = mat_A_inv[i][j] * g;
+  */
 
   return true;
 }
 
-void calibrate_accelerometer(PIMUStruct pIMU)
+void calibrate_accelerometer(PIMUStruct pIMU, int32_t accelBias[3])
 {
   uint8_t i;
 
-  enum detect_orientation_return orient = DETECT_ORIENTATION_ERROR;
-  uint8_t read_avg_result;
-  uint8_t calculation_result;
+  uint8_t   side_data_collected[SIDE_COUNT_MAX] = { false, false, false, false, false, false };
+  uint8_t   side_complete_count          = 0;
+  uint8_t   detect_attempt               = 0;
 
-  calibration_state_record = STATE_DETECT_ORIENTATION;
-  while (pIMU->accelerometer_not_calibrated)
+  enum detect_orientation_return orient = DETECT_ORIENTATION_ERROR;
+  uint8_t  accelerometer_not_calibrated = true;
+  uint8_t  read_avg_result;
+  uint8_t  calculation_result;
+
+  uint8_t  calibration_state_record = STATE_DETECT_ORIENTATION;
+  while (accelerometer_not_calibrated)
   {
         // ESP_LOGI(TAG, "calibration task[%d], state[%d] event:", task_idx, calibration_state_record);
     switch (calibration_state_record)
@@ -354,9 +373,10 @@ void calibrate_accelerometer(PIMUStruct pIMU)
       break;
 
       case STATE_CALCULATION:
-        calculation_result = calculate_calibration_values(pIMU, GRAV);
+        calculation_result = calculate_calibration_values(pIMU, GRAV, accelBias);
         if (!calculation_result)
         {
+
           chprintf(chp, "E:accelerometer has singularity, redo calibration\r\n");
           side_data_collected[0] = false;
           side_data_collected[1] = false;
@@ -371,13 +391,13 @@ void calibrate_accelerometer(PIMUStruct pIMU)
       break;
 
       case STATE_CALIBRATION_DONE:
-        pIMU->accelerometer_not_calibrated = false;
+        accelerometer_not_calibrated = false;
         chprintf(chp, "accelerometer calibration done.\r\n");
-
+        chprintf(chp, "XBias: %d, YBias: %d, ZBias: %d\r\n", accelBias[X],accelBias[Y],accelBias[Z]);
       break;
 
       case STATE_CALIBRATION_ERROR:
-        pIMU->accelerometer_not_calibrated = false;
+        accelerometer_not_calibrated = false;
         chprintf(chp, "E:calibration error, closed the process.\r\n");
       break;
 
@@ -389,95 +409,31 @@ void calibrate_accelerometer(PIMUStruct pIMU)
   }
 }
 
-void calibrate_gyroscope(PIMUStruct pIMU)
+void calibrate_gyroscope(PIMUStruct pIMU, int32_t gyroBias[3])
 {
-  calibration_state_record = STATE_READ_AVERAGE;
-  while (pIMU->gyroscope_not_calibrated)
+  uint8_t calibration_state_record = STATE_READ_AVERAGE;
+  uint8_t gyroscope_not_calibrated = true;
+
+  chprintf(chp,"reading gyroscope, hold still...\r\n");
+  while (gyroscope_not_calibrated)
   {
-    if ((calibration_state_record == STATE_READ_AVERAGE) && pIMU->gyroscope_not_calibrated)
+    if ((calibration_state_record == STATE_READ_AVERAGE) && gyroscope_not_calibrated)
     {
-      chprintf(chp,"reading gyroscope, hold still...\r\n");
-      pIMU->gyroscope_not_calibrated = !read_gyrscope_avg(pIMU, 10000);
-      if (!pIMU->gyroscope_not_calibrated)
+
+      gyroscope_not_calibrated = !read_gyrscope_avg(pIMU, 10000, gyroBias);
+      if (!gyroscope_not_calibrated)
       {
         chprintf(chp,"gyroscope calibration done\r\n");
         chprintf(chp,"gyro offsets:\r\nX:%f\r\nY:%f\r\nZ:%f\r\n",
-          pIMU->_gyroBias[X], pIMU->_gyroBias[Y], pIMU->_gyroBias[Z]);
+          gyroBias[X]*ADIS16470_GYRO_DATA_PSC_32,
+          gyroBias[Y]*ADIS16470_GYRO_DATA_PSC_32,
+          gyroBias[Z]*ADIS16470_GYRO_DATA_PSC_32);
 
       }
+      else
+        chprintf(chp,"\r\nMotion detected, calibration restarted\r\n");
     }
 
     chThdSleepMilliseconds(100);
   }
 }
-
-
-uint8_t gyro_cal(PGyroStruct pGyro, const uint8_t full_cal)
-{
-  float gyro_zero = 0.0f;
-  uint16_t i = 0;
-
-	if (pGyro->state == NOT_INITED)
-	{
-    chprintf(chp,"Gyro not inited!\r\n");
-    return -1;
-  }
-
-  int32_t sample_num;
-  if(full_cal)
-    sample_num = 50000;
-  else
-    sample_num = 1000;
-
-  pGyro->state = CALIBRATING;
-  chprintf(chp, "reading Gyro...\r\n ");
-  chprintf(chp, "                    ]\r[");
-
-  uint16_t count_samplenum_20 = 0;
-  uint16_t sample_num_mod_20 = sample_num/20;
-
-  for (i = 0; i < sample_num; i++)
-  {
-      gyro_zero += gyro_get_raw_vel(pGyro);
-
-      if(i > count_samplenum_20)
-      {
-        chprintf(chp,"=");
-        count_samplenum_20 += sample_num_mod_20;
-      }
-
-			chThdSleepMilliseconds(5);
-  }
-
-  gyro_zero *= pGyro->psc;
-  gyro_zero /= -sample_num;
-  gyro_zero -= pGyro->offset;
-
-  if(!full_cal && fabsf(gyro_zero) > 0.1f)
-  {
-    chprintf(chp,"\rCalibration failed! please perform a full re-calibration\r\n");
-    return -1;
-  }
-
-  chprintf(chp,"\r\n");
-  chprintf(chp,"Calibration complete\r\n");
-  pGyro->adis_gyroscope_not_calibrated = false;
-  pGyro->offset += gyro_zero;
-  chprintf(chp,"gyro_offset: %f\r\n",  pGyro->offset ); //* 180.0f/M_PI
-
-	pGyro->state = INITED;
-  return 0;
-}
-/*
-void cmd_calibrate_gyro(BaseSequentialStream * chp, int argc, char *argv[])
-{
-  PGyroStruct pGyro = gyro_get();
-
-  if(argc && !strcmp(argv[0],"fast"))
-    gyro_cal(pGyro,false); //fast calibration ~30s
-  else if(argc && strcmp(argv[0],"full"))
-    chprintf(chp,"Invalid parameter!\r\n");
-  else
-    gyro_cal(pGyro,true); //full calibration ~5min
-}
-*/

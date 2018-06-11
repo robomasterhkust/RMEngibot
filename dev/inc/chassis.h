@@ -8,7 +8,7 @@
 #ifndef INC_CHASSIS_H_
 #define INC_CHASSIS_H_
 
-#include "adis16265.h"
+#include "adis16470.h"
 #include "canBusProcess.h"
 
 #define CHASSIS_CAN  &CAND1         // Later should be CAND2
@@ -110,7 +110,6 @@ typedef struct{
                     //Which can be manually overriden
 
   ChassisEncoder_canStruct* _encoders;
-  PGyroStruct _pGyro;
 } chassisStruct;
 
 // MATH definition

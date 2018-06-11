@@ -2,7 +2,7 @@
 #include "hal.h"
 
 #include "island.h"
-#include "mpu6500.h"
+#include "params.h"
 #include "dbus.h"
 #include "rangefinder.h"
 #include "lift.h"
@@ -536,7 +536,7 @@ static const char PosInteractSubName[] = "front back";
 
 void island_init(void)
 {
-  pIMU = imu_get();
+  pIMU = adis16470_get();
 
   params_set(pos_sp,18,7,namePos,subNamePos,PARAM_PUBLIC);
   params_set(threshold,19,7,nameTH,subNameTH,PARAM_PUBLIC);
