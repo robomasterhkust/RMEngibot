@@ -9,6 +9,7 @@
 #include "rangefinder.h"
 #include "island.h"
 #include "dbus.h"
+#include "canBusProcess.h"
 #define SERIAL_CMD       &SDU1
 #define SERIAL_DATA      &SDU1
 
@@ -238,13 +239,10 @@ void cmd_lift_check(BaseSequentialStream * chp, int argc, char *argv[]){
   chprintf(chp,"lift4 :%f\r\n", lifts[3].pos_sp);
 }
 
-void cmd_rc_check(BaseSequentialStream * chp, int argc, char *argv[]){
+void cmd_gimbal_check(BaseSequentialStream * chp, int argc, char *argv[]){
   (void) argc,argv;
-  RC_Ctl_t* pRC = RC_get();
-  chprintf(chp,"channel0 :%f\r\n", pRC->rc.channel0);
-  chprintf(chp,"channel1 :%f\r\n", pRC->rc.channel1);
-  chprintf(chp,"channel2 :%f\r\n", pRC->rc.channel2);
-  chprintf(chp,"channel3 :%f\r\n", pRC->rc.channel3);
+  GimbalEncoder_canStruct* gimbal = can_getGimbalMotor();
+  chprintf(chp,"pitch :%f\r\n", gimbal[0].raw_angle);
 }
 
 
@@ -260,7 +258,7 @@ static const ShellCommand commands[] =
   {"temp", cmd_temp},
   {"WTF", cmd_error},
   {"lift_check",cmd_lift_check},
-  {"rc_check",cmd_rc_check},
+  {"gimbal",cmd_gimbal_check},
   {"\xEE", cmd_data},
   #ifdef PARAMS_USE_USB
     {"\xFD",cmd_param_scale},
