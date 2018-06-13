@@ -31,7 +31,7 @@ static const PWMConfig pwm12cfg = {
         0
 };
 
-#define ATTITUDE_UPDATE_PERIOD_US 1000000U/ATTITUDE_UPDATE_FREQ
+#define MPU6500_UPDATE_PERIOD_US 1000000U/MPU6500_UPDATE_FREQ
 static THD_WORKING_AREA(Attitude_thread_wa, 4096);
 static THD_FUNCTION(Attitude_thread, p)
 {
@@ -39,34 +39,56 @@ static THD_FUNCTION(Attitude_thread, p)
 
   (void)p;
 
-  PIMUStruct pIMU = adis16470_get();
-  adis16265_conf_t imu_conf = {0x01, ADIS16470_X_REV,
-                                     ADIS16470_Y,
-                                     ADIS16470_Z_REV};
-  adis16470_init(&imu_conf);
-  chThdSleepSeconds(1);
+  PIMUStruct pIMU = imu_get();
+  PGyroStruct pGyro = gyro_get();
 
-  //Check temperature feedback before starting temp controller
+  static const IMUConfigStruct imu1_conf =
+    {&SPID5, MPU6500_ACCEL_SCALE_8G, MPU6500_GYRO_SCALE_1000,
+      MPU6500_AXIS_REV_X|MPU6500_AXIS_REV_Y};
+  imuInit(pIMU, &imu1_conf);
+  imuGetData(pIMU);
+
+  if(pIMU->temperature > 0.0f)
+    tempControllerInit();
+  else
+  {
+    system_setErrorFlag();
+    pIMU->errorCode |= IMU_TEMP_ERROR;
+  }
+
+  while(pIMU->temperature < 60.0f)
+  {
+    imuGetData(pIMU);
+    system_setTempWarningFlag();
+    chThdSleepMilliseconds(50);
+  }
+
+  pIMU->state = IMU_STATE_READY;
   attitude_imu_init(pIMU);
 
   uint32_t tick = chVTGetSystemTimeX();
 
   while(true)
   {
-    tick += US2ST(ATTITUDE_UPDATE_PERIOD_US);
+    tick += US2ST(MPU6500_UPDATE_PERIOD_US);
     if(chVTGetSystemTimeX() < tick)
       chThdSleepUntil(tick);
     else
     {
       tick = chVTGetSystemTimeX();
-      system_setTempWarningFlag();
-      pIMU->error |= ADIS16470_LOSE_FRAME;
+      //system_setTempWarningFlag();
+      pIMU->errorCode |= IMU_LOSE_FRAME;
     }
 
-    if(pIMU->state == ADIS16470_READY)
-      attitude_update(pIMU);
+    imuGetData(pIMU);
+    attitude_update(pIMU, pGyro);
 
-    attitude_update_timestamp(pIMU->stamp); //Update timestamp anyway
+    if(pIMU->accelerometer_not_calibrated || pIMU->gyroscope_not_calibrated)
+    {
+      chSysLock();
+      chThdSuspendS(&(pIMU->imu_Thd));
+      chSysUnlock();
+    }
   }
 }
 
@@ -108,7 +130,7 @@ int main(void) {
 //  extiinit(); //*
 
   /* Init sequence 2: sensors, comm*/
-  RC_canTxCmd(ENABLE);
+  //gyro_init();
   rangeFinder_init();
   attitude_init();
   RC_init();
@@ -122,7 +144,7 @@ int main(void) {
   /* Init sequence 3: actuators, display*/
   chassis_init();
   lift_init();
-  //gripper_init();
+//  gripper_init();
   island_init();
 
   wdgStart(&WDGD1, &wdgcfg); //Start the watchdog

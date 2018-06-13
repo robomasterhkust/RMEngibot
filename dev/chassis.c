@@ -6,7 +6,6 @@
  */
 #include "ch.h"
 #include "hal.h"
-
 #include "dbus.h"
 #include "mpu6500.h"
 #include "chassis.h"

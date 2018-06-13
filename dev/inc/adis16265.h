@@ -42,8 +42,8 @@ typedef enum{
 #define GYRO_NSS_port           GPIOE
 
 /* Sensor specific configuration*/
-//#define GYRO_RESET_PIN          GPIOA_PIN15
-//#define GYRO_RESET_PORT         GPIOA
+#define GYRO_RESET_PIN          GPIOI_PIN9
+#define GYRO_RESET_PORT         GPIOI
 
 /*==========END OF USER CONFIGURATION==================*/
 
@@ -71,7 +71,8 @@ typedef uint16_t gyrodata_t;
 typedef enum{
   NOT_INITED = 0,
   INITED = 1,
-  CALIBRATING = 2
+  CALIBRATING = 2,
+  ADIS_ERROR = 3
 } gyro_state_t;
 
 typedef struct {
