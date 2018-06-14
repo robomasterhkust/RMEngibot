@@ -114,15 +114,15 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   chprintf(chp, "Pitch: %f\r\n", pIMU->euler_angle[Pitch]);
   chprintf(chp, "Yaw: %f\r\n", pIMU->euler_angle[Yaw]);
 
-  chprintf(chp, "motors0: %f\r\n", chassis->_motors[0].speed_sp);
-  chprintf(chp, "motors1: %f\r\n", chassis->_motors[1].speed_sp);
-  chprintf(chp, "motors2: %f\r\n", chassis->_motors[2].speed_sp);
-  chprintf(chp, "motors3: %f\r\n", chassis->_motors[3].speed_sp);
+  // chprintf(chp, "motors0: %f\r\n", chassis->_motors[0].speed_sp);
+  // chprintf(chp, "motors1: %f\r\n", chassis->_motors[1].speed_sp);
+  // chprintf(chp, "motors2: %f\r\n", chassis->_motors[2].speed_sp);
+  // chprintf(chp, "motors3: %f\r\n", chassis->_motors[3].speed_sp);
 
-  chprintf(chp, "motors0: %f\r\n", chassis->_motors[0]._speed);
-  chprintf(chp, "motors1: %f\r\n", chassis->_motors[1]._speed);
-  chprintf(chp, "motors2: %f\r\n", chassis->_motors[2]._speed);
-  chprintf(chp, "motors3: %f\r\n", chassis->_motors[3]._speed);
+  // chprintf(chp, "motors0: %f\r\n", chassis->_motors[0]._speed);
+  // chprintf(chp, "motors1: %f\r\n", chassis->_motors[1]._speed);
+  // chprintf(chp, "motors2: %f\r\n", chassis->_motors[2]._speed);
+  // chprintf(chp, "motors3: %f\r\n", chassis->_motors[3]._speed);
 }
 
 void cmd_test_RF(BaseSequentialStream * chp, int argc, char *argv[])
@@ -291,7 +291,6 @@ void cmd_rc_check(BaseSequentialStream * chp, int argc, char *argv[]){
   chprintf(chp,"channel2 :%f\r\n", pRC->rc.channel2);
   chprintf(chp,"channel3 :%f\r\n", pRC->rc.channel3);
 }
-
 
 /**
  * @brief array of shell commands, put the corresponding command and functions below

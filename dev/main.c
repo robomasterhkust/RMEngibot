@@ -40,7 +40,7 @@ static THD_FUNCTION(Attitude_thread, p)
   (void)p;
 
   PIMUStruct pIMU = imu_get();
-  PGyroStruct pGyro = gyro_get();
+  //PGyroStruct pGyro = gyro_get();
 
   static const IMUConfigStruct imu1_conf =
     {&SPID5, MPU6500_ACCEL_SCALE_8G, MPU6500_GYRO_SCALE_1000,
@@ -81,7 +81,7 @@ static THD_FUNCTION(Attitude_thread, p)
     }
 
     imuGetData(pIMU);
-    attitude_update(pIMU, pGyro);
+    attitude_update(pIMU);
 
     if(pIMU->accelerometer_not_calibrated || pIMU->gyroscope_not_calibrated)
     {

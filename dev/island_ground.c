@@ -162,7 +162,7 @@ static THD_FUNCTION(Island_thread, p)
             island_robotSetState(STATE_ROLLER_IN);
             roller_in_start = chVTGetSystemTimeX();
             //no gyro, disable this 
-            chassis_headingLockCmd(DISABLE);
+            chassis_headingLockCmd(ENABLE);
           }
           else if(
                   island_state == STATE_STAIR_1 &&

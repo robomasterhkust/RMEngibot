@@ -13,13 +13,14 @@
 
 static float _error_int[3] = {0.0f, 0.0f, 0.0f};
 
-uint8_t attitude_update(PIMUStruct pIMU, PGyroStruct pGyro)
+uint8_t attitude_update(PIMUStruct pIMU)//, PGyroStruct pGyro
 {
   float corr[3] = {0.0f, 0.0f, 0.0f};
   float angle_vel[3];
   angle_vel[X] = pIMU->gyroData[Y];
   angle_vel[Y] = pIMU->gyroData[X];
-  angle_vel[Z] = pGyro->angle_vel;
+  angle_vel[Z] = pIMU->gyroData[Z];
+
   float spinRate = vector_norm(angle_vel, 3);
   float accel = vector_norm(pIMU->accelData, 3);
 
@@ -85,10 +86,17 @@ uint8_t attitude_update(PIMUStruct pIMU, PGyroStruct pGyro)
       pIMU->euler_angle[Pitch] = euler_angle[Pitch];
       pIMU->euler_angle[Yaw] = pIMU->rev*2*M_PI + euler_angle[Yaw];
 
-      pIMU->d_euler_angle[Pitch] = cosf(pIMU->euler_angle[Roll])*pIMU->gyroData[Y] -
-        sinf(pIMU->euler_angle[Roll]) * pGyro->angle_vel;
-      pIMU->d_euler_angle[Yaw] = (sinf(pIMU->euler_angle[Roll])*pIMU->gyroData[Y] +
-        cosf(pIMU->euler_angle[Roll]) * pGyro->angle_vel) / cosf(pIMU->euler_angle[Pitch]);
+      // pIMU->d_euler_angle[Pitch] = cosf(pIMU->euler_angle[Roll])*pIMU->gyroData[Y] -
+      //   sinf(pIMU->euler_angle[Roll]) * pGyro->angle_vel;
+      // pIMU->d_euler_angle[Yaw] = (sinf(pIMU->euler_angle[Roll])*pIMU->gyroData[Y] +
+      //   cosf(pIMU->euler_angle[Roll]) * pGyro->angle_vel) / cosf(pIMU->euler_angle[Pitch]);
+
+      pIMU->d_euler_angle[Pitch] = cosf(pIMU->euler_angle[Roll])*angle_vel[Y] -
+        sinf(pIMU->euler_angle[Roll]) * angle_vel[Z];
+      pIMU->d_euler_angle[Yaw] = (sinf(pIMU->euler_angle[Roll])*angle_vel[Y] +
+        cosf(pIMU->euler_angle[Roll]) * angle_vel[Z]) / cosf(pIMU->euler_angle[Pitch]);
+
+
 
       pIMU->prev_yaw = euler_angle[Yaw];
     #endif

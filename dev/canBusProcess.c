@@ -124,11 +124,11 @@ static void can_processEncoderMessage(CANDriver* const canp, const CANRxFrame* c
           can_processChassisEncoder(&chassis_encoder[BACK_RIGHT] ,rxmsg);
           break;
         case CAN_GIMBAL_YAW_FEEDBACK_MSG_ID:
-          can_processGimbalEncoder(&gimbal_encoder[GIMBAL_YAW] ,rxmsg);
+          can_processChassisEncoder(&extra_encoder[6] ,rxmsg);
           break;
-        case CAN_GIMBAL_PITCH_FEEDBACK_MSG_ID:
-          can_processGimbalEncoder(&gimbal_encoder[GIMBAL_PITCH] ,rxmsg);
-          break;
+        // case CAN_GIMBAL_PITCH_FEEDBACK_MSG_ID:
+        //   can_processGimbalEncoder(&gimbal_encoder[GIMBAL_PITCH] ,rxmsg);
+        //   break;
         case CAN_GIMBAL_SEND_DBUS_ID:
           can_processSendDbusEncoder(&gimbal_send_dbus,rxmsg);
           break;

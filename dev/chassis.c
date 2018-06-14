@@ -472,7 +472,7 @@ void chassis_init(void)
   chassis.heading_cmd = CHASSIS_DISABLE_AUTO;
 
 
-  chassis._pGyro = gyro_get();
+  //chassis._pGyro = gyro_get();
   chassis._encoders = can_getChassisMotor();
   chThdCreateStatic(chassis_control_wa, sizeof(chassis_control_wa),
                           NORMALPRIO, chassis_control, NULL);
