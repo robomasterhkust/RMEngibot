@@ -175,9 +175,6 @@ static THD_FUNCTION(gripper_control, p)
 int count = 0;
 void gripper_calibrate(void)
 {
-  //To initialize the lift wheel, a calibration is needed
-  //CAUTION!! Moving lift wheel may cause injury, stay back during power up!!
-
   bool init_state[GRIPPER_MOTOR_NUM] = {0, 0};
 
   float prev_pos[GRIPPER_MOTOR_NUM];

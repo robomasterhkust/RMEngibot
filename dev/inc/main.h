@@ -27,6 +27,7 @@
 #include "judge.h"
 //#include "imu_temp.h"
 #include "sdlog.h"
+#include "gimbal.h"
 
 void shellStart(void);
 

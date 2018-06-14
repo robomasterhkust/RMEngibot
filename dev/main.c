@@ -108,11 +108,15 @@ int main(void) {
 //  extiinit(); //*
 
   /* Init sequence 2: sensors, comm*/
-  RC_canTxCmd(ENABLE);
+
+  #if defined (RM_INFANTRY) || defined (RM_HERO) || defined(RM_ENGIN)
+    RC_canTxCmd(ENABLE);
+  #endif
   rangeFinder_init();
   attitude_init();
   RC_init();
   judgeinit();
+  gimbal_init();
   while(!power_check())
   {
     system_setTempWarningFlag();
@@ -215,6 +219,5 @@ bool power_failure(void)
   return error & (GIMBAL_PITCH_NOT_CONNECTED | GIMBAL_YAW_NOT_CONNECTED) ==
     (GIMBAL_PITCH_NOT_CONNECTED | GIMBAL_YAW_NOT_CONNECTED);
     */
-  return false
-  ;
+  return false;
 }
