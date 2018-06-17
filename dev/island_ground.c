@@ -13,8 +13,8 @@ static PIMUStruct pIMU;
 static RC_Ctl_t* rc;
 
 static island_state_t island_state = STATE_STAIR_0;
-//static robot_state_t robot_state = STATE_GROUND;
-static robot_state_t robot_state = STATE_ISLAND_1;
+static robot_state_t robot_state = STATE_GROUND;
+//static robot_state_t robot_state = STATE_ISLAND_1;
 //testing the gripper
 static motorPosStruct* gripper;
 
