@@ -13,8 +13,11 @@ static PIMUStruct pIMU;
 static RC_Ctl_t* rc;
 
 static island_state_t island_state = STATE_STAIR_0;
-static robot_state_t robot_state = STATE_GROUND;
-//static robot_state_t robot_state = STATE_ISLAND_1;
+//static robot_state_t robot_state = STATE_GROUND;
+static robot_state_t robot_state = STATE_ISLAND_1;
+//testing the gripper
+static motorPosStruct* gripper;
+
 
 
 static float pos_cmd = 0.0f;
@@ -559,6 +562,7 @@ void island_init(void)
   params_set(threshold,19,7,nameTH,subNameTH,PARAM_PUBLIC);
   params_set(gripper_pos_sp, 22,6,PosName,PosSubName,PARAM_PUBLIC);
   params_set(hero_interact_pos_sp,23,2,PosInteractName,PosInteractSubName,PARAM_PUBLIC);
+  gripper = gripper_get();
   chThdCreateStatic(Island_thread_wa, sizeof(Island_thread_wa),
   NORMALPRIO + 5,
       Island_thread, NULL); //*

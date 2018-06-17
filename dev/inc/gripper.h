@@ -27,7 +27,7 @@ typedef enum {
 } gripper_error_t;
 
 static const float gripper_gear_ratio[GRIPPER_MOTOR_NUM] = {27.0f, 36.0f};
-static const int16_t gripper_output_max[GRIPPER_MOTOR_NUM] = {15000, 16384};
+static const int16_t gripper_output_max[GRIPPER_MOTOR_NUM] = {15000, 10000};
 #include "chassis.h"
 
 motorPosStruct* gripper_get(void);
