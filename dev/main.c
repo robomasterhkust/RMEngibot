@@ -135,6 +135,9 @@ int main(void) {
   attitude_init();
   RC_init();
   judgeinit();
+  //gripper_init();
+  
+
   while(!power_check())
   {
     system_setTempWarningFlag();
@@ -144,7 +147,7 @@ int main(void) {
   /* Init sequence 3: actuators, display*/
   chassis_init();
   lift_init();
-//  gripper_init();
+  gripper_init();
   island_init();
 
   wdgStart(&WDGD1, &wdgcfg); //Start the watchdog

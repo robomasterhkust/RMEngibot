@@ -4,7 +4,7 @@
 #include "gripper.h"
 #include "canBusProcess.h"
 #include <math.h>
-
+#include "dbus.h"
 #include "system_error.h"
 
 static ChassisEncoder_canStruct* gripper_encoders;
@@ -15,9 +15,10 @@ static bool in_position[GRIPPER_MOTOR_NUM] = {0 , 0};
 
 static pid_controller_t controllers[GRIPPER_MOTOR_NUM];
 static gripper_state_t gripper_state = GRIPPER_UNINIT;
-
+static float pos_cmd = 0.0f;
+static float pos_cmd1 = 0.0f;
 static gripper_error_t gripper_error = 0;
-
+static RC_Ctl_t* rc;
 motorPosStruct* gripper_get(void)
 {
   return motors;
@@ -129,6 +130,7 @@ static int16_t gripper_controlPos
   return (int16_t)(boundOutput(output,output_max));
 }
 
+float output[2];
 #define GRIPPER_UPDATE_PERIOD_US  1000000/GRIPPER_CONTROL_FREQ
 static THD_WORKING_AREA(gripper_control_wa, 512);
 static THD_FUNCTION(gripper_control, p)
@@ -136,7 +138,7 @@ static THD_FUNCTION(gripper_control, p)
   (void)p;
   chRegSetThreadName("gripper controller");
 
-  float output[2];
+  
   float output_max[2];
   uint32_t tick = chVTGetSystemTimeX();
   while(true)
@@ -149,7 +151,41 @@ static THD_FUNCTION(gripper_control, p)
       tick = chVTGetSystemTimeX();
     }
 
+
+
     gripper_encoderUpdate();
+
+
+    // int16_t input = rc->rc.channel3 - RC_CH_VALUE_OFFSET +
+    // ((rc->keyboard.key_code & KEY_Q) - (rc->keyboard.key_code & KEY_E)) * 200;
+
+
+
+    // if(input > 400)
+    //   pos_cmd += 0.05f;
+    // else if(input > 100)
+    //   pos_cmd += 0.005f;
+    // else if(input < -400)
+    //   pos_cmd -= 0.05f;
+    // else if(input < -100)
+    //   pos_cmd -= 0.005f;
+
+
+    // int16_t input1 = rc->rc.channel2 - RC_CH_VALUE_OFFSET +
+    // ((rc->keyboard.key_code & KEY_Q) - (rc->keyboard.key_code & KEY_E)) * 200;
+
+    
+
+    // if(input1 > 400)
+    //   pos_cmd1 += 0.05f;
+    // else if(input1 > 100)
+    //   pos_cmd1 += 0.005f;
+    // else if(input1 < -400)
+    //   pos_cmd1 -= 0.05f;
+    // else if(input1 < -100)
+    //   pos_cmd1 -= 0.005f;
+
+    // gripper_changePos(pos_cmd,pos_cmd1);
 
     uint8_t i;
     for(i = 0; i < GRIPPER_MOTOR_NUM; i++)
@@ -172,7 +208,6 @@ static THD_FUNCTION(gripper_control, p)
 }
 
 #define STALL_COUNT_MAX 100U
-int count = 0;
 void gripper_calibrate(void)
 {
   //To initialize the lift wheel, a calibration is needed
@@ -186,12 +221,19 @@ void gripper_calibrate(void)
   uint8_t stall_count[GRIPPER_MOTOR_NUM] = {0, 0};
 
   const float motor_step[GRIPPER_MOTOR_NUM] = {0.002f, 0.02f};
+  BUZZER(500);
+  chThdSleepMilliseconds(500);
+  BUZZER(0);
+  chThdSleepMilliseconds(500);
+  BUZZER(500);
+  chThdSleepMilliseconds(500);
+  BUZZER(0);
 
   while(init_count < GRIPPER_MOTOR_NUM)
   {
     uint8_t i;
     init_count = 0;  //finish initialization only if all motor calibration finishes
-    for (i = 0; i < GRIPPER_MOTOR_NUM; i++)
+    for (i = 0; i < GRIPPER_MOTOR_NUM; ++i)
     {
       if(stall_count[i] < STALL_COUNT_MAX)
       {
@@ -212,10 +254,6 @@ void gripper_calibrate(void)
       }
 
       init_count += init_state[i] ? 1 : 0;
-      if(count == 0 && init_state[0] == true){
-        ++count;
-        motors[0].pos_sp = offset[0] - 0.1f;
-      }
     }
 
     chThdSleepMilliseconds(2);
@@ -230,6 +268,7 @@ static const HandName = "Gripper Hand";
 #define GRIPPER_ERROR_INT_MAX  30000
 void gripper_init(void)
 {
+  rc = RC_get();
   memset(&motors, 0, sizeof(motorPosStruct) * GRIPPER_MOTOR_NUM);
   gripper_encoders = can_getExtraMotor() + 4;
 

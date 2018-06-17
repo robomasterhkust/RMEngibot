@@ -14,6 +14,9 @@ static RC_Ctl_t* rc;
 
 static island_state_t island_state = STATE_STAIR_0;
 static robot_state_t robot_state = STATE_GROUND;
+//static robot_state_t robot_state = STATE_ISLAND_1;
+
+
 static float pos_cmd = 0.0f;
 static param_t pos_sp[7];
 static param_t threshold[7];
@@ -70,9 +73,23 @@ static THD_FUNCTION(Island_thread, p)
   chThdSleepSeconds(2);
   if(!lift_getError())
     lift_calibrate();
+  else{
+    do{
+      chThdSleepMilliseconds(500);
+    }while(lift_getError());
+    lift_calibrate();
+  }
 
-  if(!gripper_getError())
+
+  if(!gripper_getError()){
     gripper_calibrate();
+  }
+  else{
+    do{
+      chThdSleepMilliseconds(500);
+    }while(gripper_getError());
+    gripper_calibrate();
+  }
 
   systime_t roller_in_start;
 
@@ -418,7 +435,7 @@ static THD_FUNCTION(Island_thread, p)
 
         if(chVTGetSystemTimeX() > pour_ammo_time + MS2ST(1500))
         {
-          gripper_changePos(gripper_pos_sp[1], gripper_pos_sp[5]); //strech out. close hand
+          gripper_changePos(gripper_pos_sp[1], gripper_pos_sp[4]); //strech out. close hand
           gripper_release_time = chVTGetSystemTimeX();
           island_robotSetState(STATE_ISLAND_5);
         }
