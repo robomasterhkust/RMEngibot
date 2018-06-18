@@ -135,7 +135,7 @@ int main(void) {
   attitude_init();
   RC_init();
   judgeinit();
-  //gripper_init();
+  
   
 
   while(!power_check())
@@ -148,6 +148,7 @@ int main(void) {
   chassis_init();
   lift_init();
   gripper_init();
+  gimbal_init();
   island_init();
 
   wdgStart(&WDGD1, &wdgcfg); //Start the watchdog

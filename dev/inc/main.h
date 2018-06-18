@@ -25,6 +25,7 @@
 #include "lift.h"
 #include "island.h"
 #include "gripper.h"
+#include "gimbal.h"
 
 #include "exti.h"
 #include "judge.h"

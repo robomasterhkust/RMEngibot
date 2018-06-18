@@ -16,7 +16,6 @@ static island_state_t island_state = STATE_STAIR_0;
 static robot_state_t robot_state = STATE_GROUND;
 //static robot_state_t robot_state = STATE_ISLAND_1;
 //testing the gripper
-static motorPosStruct* gripper;
 
 
 
@@ -25,6 +24,7 @@ static param_t pos_sp[7];
 static param_t threshold[7];
 static param_t gripper_pos_sp[6];
 static param_t hero_interact_pos_sp[2];
+static param_t gimbal_pos_sp[2];
 
 static float start_yaw;
 static systime_t pour_ammo_time = 0;
@@ -554,6 +554,11 @@ static const char PosSubName[] = "ArmIni ArmOut ArmIn ArmUp Open Close";
 static const char PosInteractName[] = "Hero interact";
 static const char PosInteractSubName[] = "front back";
 
+
+static const char GimbalPosName[] = "gimbal Pos";
+static const char GimbalPosSubName[] = "up down";
+
+
 void island_init(void)
 {
   pIMU = imu_get();
@@ -562,8 +567,7 @@ void island_init(void)
   params_set(threshold,19,7,nameTH,subNameTH,PARAM_PUBLIC);
   params_set(gripper_pos_sp, 22,6,PosName,PosSubName,PARAM_PUBLIC);
   params_set(hero_interact_pos_sp,23,2,PosInteractName,PosInteractSubName,PARAM_PUBLIC);
-  gripper = gripper_get();
+  params_set(gimbal_pos_sp, 25, 2, GimbalPosName, GimbalPosSubName , PARAM_PUBLIC);
   chThdCreateStatic(Island_thread_wa, sizeof(Island_thread_wa),
-  NORMALPRIO + 5,
-      Island_thread, NULL); //*
+  NORMALPRIO + 5, Island_thread, NULL); //*
 }
