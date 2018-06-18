@@ -17,7 +17,7 @@ static lpfilterStruct lp_speed;
 static bool in_position;
 static pid_controller_t controllers;
 static gimbal_state_t gimbal_state = GIMBAL_UNINIT;
-
+static param_t gimbal_pos_sp[2];
 
 motorPosStruct* gimbal_get(void)
 {
@@ -28,7 +28,7 @@ motorPosStruct* gimbal_get(void)
 
 void gimbal_kill(void){
 	system_setWarningFlag();
-    can_motorSetCurrent(GRIPPER_CAN, GRIPPER_CAN_EID, 0, 0, 0, 0);
+  can_motorSetCurrent(GRIPPER_CAN, GRIPPER_CAN_EID, 0, 0, 0, 0);
 
 }
 
@@ -41,45 +41,40 @@ static void gimbal_encoderUpdate(void)
 	if(gimbal_encoders.updated)
 	{
 	  //Check validiaty of can connection
-	  gimbal_encoders.updated = false;
+   gimbal_encoders.updated = false;
 
-	  float pos_input = gimbal_encoders.raw_angle*GIMBAL_ANGLE_PSC;
-	  float speed_input = gimbal_encoders.raw_speed/ gimbal_gear_ratio;
+   float pos_input = gimbal_encoders.raw_angle*GIMBAL_ANGLE_PSC;
+   float speed_input = gimbal_encoders.raw_speed/ gimbal_gear_ratio;
 
-	  // if((motors[i]._prev < 0.6f && pos_input > 5.68f) ||
-	  //   (speed_input < -80.0f && pos_input > motors[i]._prev))
-	  //   motors[i].rev--;
-	  // if((motors[i]._prev > 5.68f && pos_input < 0.6f) ||
-	  //   (speed_input > 80.0f && pos_input < motors[i]._prev))
-	  //   motors[i].rev++;
-	  motors.rev = gimbal_encoders.round_count;
 
-	  motors._prev = pos_input;
-	  pos_input += motors[i].rev * 2*M_PI;
+   motors.rev = gimbal_encoders.round_count;
 
-	  motors._pos =  pos_input / gimbal_gear_ratio;
-	  motors._speed = lpfilter_apply(&lp_speed, speed_input);
-	  motors._wait_count = 1;
-	}
-	else
-	{
-	  motors._wait_count++;
-	  if(motors._wait_count > GIMBAL_CONNECTION_ERROR_COUNT)
-	  {
-	    motors._wait_count = 1;
-	    gimbal_kill();
-	  }
-	}
+   motors._prev = pos_input;
+   pos_input += motors[i].rev * 2*M_PI;
 
-	if((motors.pos_sp - motors._pos) < 2 * M_PI &&
-	   (motors.pos_sp - motors._pos) > -2 * M_PI)
-	  motors.in_position++;
-	else
-	  motors.in_position = 0;
+   motors._pos =  pos_input / gimbal_gear_ratio;
+   motors._speed = lpfilter_apply(&lp_speed, speed_input);
+   motors._wait_count = 1;
+ }
+ else
+ {
+   motors._wait_count++;
+   if(motors._wait_count > GIMBAL_CONNECTION_ERROR_COUNT)
+   {
+     motors._wait_count = 1;
+     gimbal_kill();
+   }
+ }
 
-	if(motors.in_position > GIMBAL_IN_POSITION_COUNT)
-	{
-	  motors.in_position = GIMBAL_IN_POSITION_COUNT;
+ if((motors.pos_sp - motors._pos) < 2 * M_PI &&
+  (motors.pos_sp - motors._pos) > -2 * M_PI)
+   motors.in_position++;
+ else
+   motors.in_position = 0;
+
+ if(motors.in_position > GIMBAL_IN_POSITION_COUNT)
+ {
+   motors.in_position = GIMBAL_IN_POSITION_COUNT;
 	  in_position = true; //Motor is regarded as moved to postion
 	}
 
@@ -96,14 +91,14 @@ void gimbal_changePos(const float pos_sp)
 }
 
 static int16_t gimbal_controlPos
-  (const motorPosStruct* const motor, pid_controller_t* const controller,
+(const motorPosStruct* const motor, pid_controller_t* const controller,
   const int16_t output_max)
 {
   float error = motor->pos_sp - motor->_pos;
   controller->error_int += error * controller->ki;
   controller->error_int = boundOutput(controller->error_int, controller->error_int_max);
   float output =
-    error*controller->kp + controller->error_int - motor->_speed * controller->kd;
+  error*controller->kp + controller->error_int - motor->_speed * controller->kd;
 
   return (int16_t)(boundOutput(output,output_max));
 }
@@ -131,7 +126,7 @@ static THD_FUNCTION(gimbal_control, p)
 
     gimbal_encoderUpdate();
 
-   
+
     if(gimbal_state == GIMBAL_INITING)
     {
     	output_max = 3000;
@@ -144,7 +139,7 @@ static THD_FUNCTION(gimbal_control, p)
     
 
     can_motorSetCurrent(GIMBAL_CAN, GIMBAL_CAN_EID,
-        output, 0, 0, 0);
+      output, 0, 0, 0);
   }
 }
 
@@ -195,6 +190,8 @@ static const GimbalName = "Gimbal";
 
 #define GRIPPER_ERROR_INT_MAX  30000
 
+static const char PosName[] = "gimbal Pos";
+static const char PosSubName[] = "up down";
 
 void gimbal_init(void)
 {
@@ -213,10 +210,10 @@ void gimbal_init(void)
   controllers.error_int_max = GRIPPER_ERROR_INT_MAX;
   
   params_set(&controllers, 24,3,GimbalName, subname_PID,PARAM_PUBLIC);
-  
+  params_set(&pos_sp, 25, 2, PosName, PosSubName , PARAM_PUBLIC);
 
   gimbal_state = GIMBAL_INITING;
 
   chThdCreateStatic(gimbal_control_wa, sizeof(gimbal_control_wa),
-                          NORMALPRIO, gimbal_control, NULL);
+    NORMALPRIO, gimbal_control, NULL);
 }
