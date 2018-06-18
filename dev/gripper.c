@@ -120,16 +120,16 @@ void gripper_changePos(const float pos_sp1, const float pos_sp2)
   while(offset[0] - pos_sp1 != motors[0].pos_sp){
     in_position[0] = false;
 
-    if(ABS(offset[0] - pos_sp1 - motors[0].pos_sp) < 0.012){
+    if(ABS(offset[0] - pos_sp1 - motors[0].pos_sp) < 0.01){
       in_position[0] = false;
       motors[0].pos_sp = offset[0] - pos_sp1;
     }
     else{
       if(offset[0] - pos_sp1 - motors[0].pos_sp > 0 ){
-        motors[0].pos_sp += 0.012;
+        motors[0].pos_sp += 0.01;
       }
       else{
-        motors[0].pos_sp -= 0.012;
+        motors[0].pos_sp -= 0.01;
       }
     }
     chThdSleepMilliseconds(2);

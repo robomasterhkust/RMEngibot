@@ -414,7 +414,7 @@ static THD_FUNCTION(Island_thread, p)
           if(lift_inPosition())
           {
             chassis_tempSuspend(DISABLE);
-            gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[5]); //swing back. close hand
+            gripper_changePos(gripper_pos_sp[3], gripper_pos_sp[5]); //swing up. close hand
             if(gripper_inPosition(GRIPPER_ARM))
             {
               pour_ammo_time = chVTGetSystemTimeX();
@@ -448,9 +448,9 @@ static THD_FUNCTION(Island_thread, p)
       case STATE_ISLAND_5:
         DOG_RELAX();
 
-        if(chVTGetSystemTimeX() > gripper_release_time + MS2ST(1000))
+        if(chVTGetSystemTimeX() > gripper_release_time + MS2ST(700))
         {
-          gripper_changePos(gripper_pos_sp[1], gripper_pos_sp[4]); //strech out. open hand
+          //gripper_changePos(gripper_pos_sp[1], gripper_pos_sp[4]); //strech out. open hand
           if(gripper_inPosition(GRIPPER_HAND))
             island_robotSetState(STATE_ISLAND_1);
         }
