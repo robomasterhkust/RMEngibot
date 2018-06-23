@@ -7,7 +7,6 @@
 
 #define FLT_EPSILON        1.1920929e-07F
 #define M_PI_2_F    (float)(M_PI/2)
-#define DEG2RAD(x)  (x * 0.0174533f)
 
 /**
  * @source pixhawk/src/lib/mathlib/math/filter/LowPassFilter2p.cpp
@@ -38,9 +37,9 @@ static inline void bound(float* input, const float max)
 static inline float boundOutput(const float input, const float max)
 {
   float output;
-  if(input <= max && input >= -max)
+  if(input < max && input > -max)
     output = input;
-  else if(input > max)
+  else if(input >= max)
     output = max;
   else
     output = -max;
@@ -48,14 +47,8 @@ static inline float boundOutput(const float input, const float max)
   return output;
 }
 
-// MATH function
 static inline float mapInput(float x, float in_min, float in_max, float out_min, float out_max)
 {
-  if(x >= in_max)
-    return out_max;
-  else if(x <= in_min)
-    return out_min;
-
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
@@ -150,6 +143,25 @@ static inline void quarternion2euler(const float q[4], float euler_angle[3])
 }
 
 /**
+ * create quaternion from euler angle
+ */
+static inline void euler2quarternion(const float euler_angle[3], float q[4])
+{
+  float cosPhi_2 = cosf(euler_angle[0] / 2.0f);
+  float sinPhi_2 = sinf(euler_angle[0] / 2.0f);
+  float cosTheta_2 = cosf(euler_angle[1] / 2.0f);
+  float sinTheta_2 = sinf(euler_angle[1] / 2.0f);
+  float cosPsi_2 = cosf(euler_angle[2] / 2.0f);
+  float sinPsi_2 = sinf(euler_angle[2] / 2.0f);
+
+
+  q[0] = (cosPhi_2 * cosTheta_2 * cosPsi_2 + sinPhi_2 * sinTheta_2 * sinPsi_2);
+  q[1] = (sinPhi_2 * cosTheta_2 * cosPsi_2 - cosPhi_2 * sinTheta_2 * sinPsi_2);
+  q[2] = (cosPhi_2 * sinTheta_2 * cosPsi_2 + sinPhi_2 * cosTheta_2 * sinPsi_2);
+  q[3] = (cosPhi_2 * cosTheta_2 * sinPsi_2 - sinPhi_2 * sinTheta_2 * cosPsi_2);
+}
+
+/**
  * @source from MatrixMath.cpp from Arduino
  * @brief for known size matrix multiplication, no check
  * A = input matrix (m x p)
@@ -231,6 +243,18 @@ void lpfilter_init(lpfilterStruct* const lp,
 
 float lpfilter_apply(lpfilterStruct* const lp, const float input);
 
-bool threshold_count(const bool statement, const uint16_t count, uint16_t* const curr_count);
+bool state_count(const bool statement, const uint16_t count, uint16_t* const curr_count);
+
+
+static inline void quarternionXquarternion(float q1[4], float q2[4],float result[4]){
+  
+  result[0] =  q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3];
+  result[1] =  q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2];
+  result[2] =  q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1];
+  result[3] =  q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0];
+
+}
+
+
 
 #endif

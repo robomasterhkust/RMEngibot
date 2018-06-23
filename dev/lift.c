@@ -85,6 +85,7 @@ static void lift_encoderUpdate(void)
       motors[i]._pos =  pos_input/LIFT_GEAR_RATIO;
       motors[i]._speed = lpfilter_apply(&lp_speed[i], speed_input);
       motors[i]._wait_count = 1;
+      lift_state == LIFT_RUNNING;
     }
     else
     {

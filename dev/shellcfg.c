@@ -9,6 +9,8 @@
 #include "rangefinder.h"
 #include "island.h"
 #include "dbus.h"
+#include "gimbal.h"
+#include "math_misc.h"
 #define SERIAL_CMD       &SDU1
 #define SERIAL_DATA      &SDU1
 
@@ -285,9 +287,14 @@ void cmd_lift_check(BaseSequentialStream * chp, int argc, char *argv[]){
 
 void cmd_gripper_check(BaseSequentialStream * chp, int argc, char *argv[]){
   (void) argc,argv;
-  motorPosStruct*  g = gripper_get();
-  chprintf(chp,"g :%f\r\n", g[0]._pos);
-  chprintf(chp,"g :%f\r\n", g[1]._pos);
+  ChassisEncoder_canStruct* g = can_getExtraMotor() + 6;
+  float * E = get_Euler();
+  chprintf(chp,"g :%f\r\n", g ->radian_angle / 36);
+  chprintf(chp,"Euler1 :%f\r\n", E[0]);
+  chprintf(chp,"Euler2 :%f\r\n", E[1]);
+  chprintf(chp,"Euler3 :%f\r\n", E[2]);
+  //chprintf(chp,"Euler4 :%f\r\n", E[3]);
+
 
 }
 

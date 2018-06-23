@@ -1122,10 +1122,10 @@
  */
 #define VAL_GPIOH_MODER             (PIN_MODE_INPUT(GPIOH_OSC_IN) |         \
                                      PIN_MODE_INPUT(GPIOH_OSC_OUT) |        \
-                                     PIN_MODE_INPUT(GPIOH_PIN2) |           \
-                                     PIN_MODE_INPUT(GPIOH_PIN3) |           \
-                                     PIN_MODE_INPUT(GPIOH_PIN4) |           \
-                                     PIN_MODE_INPUT(GPIOH_PIN5) |           \
+                                     PIN_MODE_OUTPUT(GPIOH_PIN2) |           \
+                                     PIN_MODE_OUTPUT(GPIOH_PIN3) |           \
+                                     PIN_MODE_OUTPUT(GPIOH_PIN4) |           \
+                                     PIN_MODE_OUTPUT(GPIOH_PIN5) |           \
                                      PIN_MODE_ALTERNATE(GPIOH_TIM12_CH1) |           \
                                      PIN_MODE_INPUT(GPIOH_PIN7) |           \
                                      PIN_MODE_INPUT(GPIOH_PIN8) |           \
@@ -1187,9 +1187,9 @@
 #define VAL_GPIOH_ODR               (PIN_ODR_HIGH(GPIOH_OSC_IN) |           \
                                      PIN_ODR_HIGH(GPIOH_OSC_OUT) |          \
                                      PIN_ODR_HIGH(GPIOH_PIN2) |             \
-                                     PIN_ODR_HIGH(GPIOH_PIN3) |             \
-                                     PIN_ODR_HIGH(GPIOH_PIN4) |             \
-                                     PIN_ODR_HIGH(GPIOH_PIN5) |             \
+                                     PIN_ODR_LOW(GPIOH_PIN3) |             \
+                                     PIN_ODR_LOW(GPIOH_PIN4) |             \
+                                     PIN_ODR_LOW(GPIOH_PIN5) |             \
                                      PIN_ODR_LOW(GPIOH_TIM12_CH1) |             \
                                      PIN_ODR_HIGH(GPIOH_PIN7) |             \
                                      PIN_ODR_HIGH(GPIOH_PIN8) |             \

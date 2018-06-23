@@ -15,7 +15,6 @@ static bool in_position[GRIPPER_MOTOR_NUM] = {0 , 0};
 
 static pid_controller_t controllers[GRIPPER_MOTOR_NUM];
 static gripper_state_t gripper_state = GRIPPER_UNINIT;
-static float pos_cmd = 0.0f;
 static float pos_cmd1 = 0.0f;
 static gripper_error_t gripper_error = 0;
 static RC_Ctl_t* rc;
@@ -109,13 +108,6 @@ void gripper_changePos(const float pos_sp1, const float pos_sp2)
     in_position[1] = false;
     motors[1].pos_sp = offset[1] - pos_sp2;
   }
-
-  // if(offset[0] - pos_sp1 != motors[0].pos_sp)
-  // {
-  //   in_position[0] = false;
-  //   motors[0].pos_sp = offset[0] - pos_sp1;
-  // }
-
   
   while(offset[0] - pos_sp1 != motors[0].pos_sp){
     in_position[0] = false;
@@ -253,6 +245,8 @@ void gripper_calibrate(void)
   }
   motors[1].pos_sp = offset[1] - 0.1f;
   gripper_state = GRIPPER_RUNNING;
+
+  
 }
 
 static const ArmName = "Gripper Arm";

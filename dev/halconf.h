@@ -50,6 +50,8 @@
 #define LS2_DOWN()      (!palReadPad(GPIOA,GPIOC_PIN4))
 #define LS3_DOWN()      (!palReadPad(GPIOA,GPIOC_PIN5))
 
+//#define POWER1_ON()     (palSetPad(GPIOH, GPIOH_PIN2))
+ 
 //Sets of command for Pneumatics Output
 #define PN1_ON()        (palSetPad(GPIOD, GPIOD_PNEUMATICS1))
 #define PN2_ON()        (palSetPad(GPIOD, GPIOD_PNEUMATICS2))
