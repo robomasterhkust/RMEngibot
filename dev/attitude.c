@@ -10,8 +10,9 @@
 
 #include "attitude.h"
 #include "math_misc.h"
-
+#include "mpu6500.h"
 static float _error_int[3] = {0.0f, 0.0f, 0.0f};
+static lpfilterStruct gyro_lpf;
 
 uint8_t attitude_update(PIMUStruct pIMU)//, PGyroStruct pGyro
 {
@@ -20,6 +21,8 @@ uint8_t attitude_update(PIMUStruct pIMU)//, PGyroStruct pGyro
   angle_vel[X] = pIMU->gyroData[Y];
   angle_vel[Y] = pIMU->gyroData[X];
   angle_vel[Z] = pIMU->gyroData[Z];
+
+  pIMU->gyroFiltered[Pitch] = lpfilter_apply(&gyro_lpf, pIMU->gyroData[X]);
 
   float spinRate = vector_norm(angle_vel, 3);
   float accel = vector_norm(pIMU->accelData, 3);
@@ -110,6 +113,8 @@ uint8_t attitude_update(PIMUStruct pIMU)//, PGyroStruct pGyro
 uint8_t attitude_imu_init(PIMUStruct pIMU)
 {
   float rot_matrix[3][3];
+  lpfilter_init(&gyro_lpf, 1000, 60.0f);
+
 
   float norm = vector_norm(pIMU->accelData,3);
   uint8_t i;

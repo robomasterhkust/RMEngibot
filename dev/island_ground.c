@@ -148,7 +148,7 @@ static THD_FUNCTION(Island_thread, p)
           island_robotSetState(STATE_ONFOOT);
         }
         else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
-          island_robotSetState(STATE_RUSHDOWN_1);
+          island_robotSetState(STATE_RUSHDOWN_1);//we can change this to resecue mode
         else if(S2 == LOCK_MODE &&(s1_reset && island_ascend()))
           island_robotSetState(STATE_HERO_INTERACT_1);
 

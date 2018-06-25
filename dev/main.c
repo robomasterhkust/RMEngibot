@@ -135,7 +135,7 @@ int main(void) {
   attitude_init();
   RC_init();
   judgeinit();
-
+  //gimbal_init();
   //POWER1_ON();
   
   while(!power_check())

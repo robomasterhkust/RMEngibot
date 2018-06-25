@@ -15,7 +15,7 @@ static volatile motorPosStruct motors;
 static float offset;
 static lpfilterStruct lp_speed;
 static bool in_position;
-static pid_controller_t controllers;
+static pid_controller_t controllers[2];
 static gimbal_state_t gimbal_state = GIMBAL_UNINIT;
 static const float gimbal_gear_ratio = 36.0f;
 static const int16_t gimbal_output_max = 16384;
@@ -24,7 +24,6 @@ static RC_Ctl_t* rc;
 static int error = 0;
 static float angel_offset;
 static param_t gimbal_pos_sp[2];
-
 
 static gimbal_position_t gimbal_position = GIMBAL_UP;
 
@@ -35,6 +34,10 @@ float result[4];
 float EulerAngel[3];
 float q[4];
 
+//param for V comtrol 
+float gV;
+float mV;
+
 
 void gimbal_up(){
   gimbal_position = GIMBAL_UP;
@@ -42,7 +45,8 @@ void gimbal_up(){
 }
 void gimbal_down(){
   gimbal_position = GIMBAL_DOWN;
-   gimbal_changePos(gimbal_pos_sp[1]);
+   //gimbal_changePos(gimbal_pos_sp[1]- pos_cmd);
+  gimbal_changePos(gimbal_pos_sp[1]);
 }
 
 float*get_Euler(){
@@ -137,8 +141,7 @@ static int16_t gimbal_controlPos
 
   return (int16_t)(boundOutput(output,output_max));
 }
-
-
+//static int16_t gimbal_controlspeed()
 #define GIMBAL_UPDATE_PERIOD_US  1000000/GIMBAL_CONTROL_FREQ
 static THD_WORKING_AREA(gimbal_control_wa, 512);
 static THD_FUNCTION(gimbal_control, p)
@@ -163,14 +166,20 @@ static THD_FUNCTION(gimbal_control, p)
     int16_t input = rc->rc.channel3 - RC_CH_VALUE_OFFSET +
     ((rc->keyboard.key_code & KEY_Q) - (rc->keyboard.key_code & KEY_E)) * 200;
 
-if(input > 400)
-      pos_cmd += 0.01f;
-    else if(input > 100)
-      pos_cmd += 0.0025f;
-    else if(input < -400)
-      pos_cmd -= 0.01f;
-    else if(input < -100)
-      pos_cmd -= 0.0025f;
+    if(pos_cmd > 0.15 ){
+      pos_cmd = 0.15;
+    }
+    else{
+      if(input > 400)
+        pos_cmd += 0.01f;
+      else if(input > 100)
+        pos_cmd += 0.0025f;
+      else if(input < -400)
+        pos_cmd -= 0.01f;
+      else if(input < -100)
+        pos_cmd -= 0.0025f;
+
+    }
 
 
     //we can use this pos_cmd to control the gimabl 
@@ -182,9 +191,20 @@ if(input > 400)
     else
       output_max = gimbal_output_max;
 
+
+    switch(gimbal_position){
+      case GIMBAL_UP:
+      if(gimbal_state == GIMBAL_INITING){
+        output = gimbal_controlPos(&motors, &controllers, output_max);
+
+
+        can_motorSetCurrent(GIMBAL_CAN, GIMBAL_CAN_EID,
+          output, 0, 0, 0);
+      }else{
+
       // current_angle = (gimbal_encoders->radian_angle - angel_offset)/gimbal_gear_ratio ;
 
-      // PIMUStruct pIMU = imu_get();
+        PIMUStruct pIMU = imu_get();
       // float Euler[3] = {0,current_angle,0};
 
       // euler2quarternion(Euler,q);
@@ -193,14 +213,33 @@ if(input > 400)
 
       // quarternion2euler(result,EulerAngel);
 
+    gV = pIMU->gyroFiltered[Pitch] ; // rad/s
+
+    mV = gimbal_encoders->raw_speed /60 * 2 * M_PI /gimbal_gear_ratio; // rpm
+
+
+
+
     output = gimbal_controlPos(&motors, &controllers, output_max);
 
 
     can_motorSetCurrent(GIMBAL_CAN, GIMBAL_CAN_EID,
       output, 0, 0, 0);
-  
-    
+
   }
+
+  break;
+
+  case GIMBAL_DOWN:
+    output = gimbal_controlPos(&motors, &controllers, output_max);
+
+
+    can_motorSetCurrent(GIMBAL_CAN, GIMBAL_CAN_EID,
+      output, 0, 0, 0);
+    break;
+
+  }    
+}
 }
 
 
@@ -259,7 +298,8 @@ void gimbal_calibrate(void){
 
 }
 
-static const GimbalName = "Gimbal";
+static const GimbalName = "GimbalPos";
+
 
 static const char GimbalPosName[] = "gimbal Pos";
 static const char GimbalPosSubName[] = "up down";
@@ -281,9 +321,8 @@ void gimbal_init(void)
   controllers.error_int = 0.0f;
   controllers.error_int_max = GIMBAL_ERROR_INT_MAX;
   
-  params_set(&controllers, 24,3,GimbalName, subname_PID,PARAM_PUBLIC);
+  params_set(&controllers[0], 24,3,GimbalName, subname_PID,PARAM_PUBLIC);
   params_set(gimbal_pos_sp, 25, 2, GimbalPosName, GimbalPosSubName , PARAM_PUBLIC);
-
   gimbal_state = GIMBAL_INITING;
 
   chThdCreateStatic(gimbal_control_wa, sizeof(gimbal_control_wa),

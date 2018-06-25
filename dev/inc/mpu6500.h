@@ -129,7 +129,7 @@ typedef struct tagIMUStruct {
   float temperature;      /* IMU temperature.                 */
 
   float accelFiltered[3]; /* Filtered accelerometer data.    */
-  float gyroFiltered[3];  /* Filtered gyro data.    */
+  float gyroFiltered[3];  /* Filtered gyro data.      unit : rad/s*/ 
 
   float qIMU[4];          /* Attitude quaternion of the IMU. */
 

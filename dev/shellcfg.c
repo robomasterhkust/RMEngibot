@@ -108,9 +108,9 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   //PGyroStruct PGyro = gyro_get();
   chassisStruct* chassis = chassis_get();
 
-  chprintf(chp, "AccelX: %f\r\n", pIMU->accelData[X]);
-  chprintf(chp, "AccelY: %f\r\n", pIMU->accelData[Y]);
-  chprintf(chp, "AccelZ: %f\r\n", pIMU->accelData[Z]);
+  chprintf(chp, "GyroX: %f\r\n", pIMU->gyroFiltered[X]);
+  chprintf(chp, "GyroY: %f\r\n", pIMU->gyroFiltered[Y]);
+  chprintf(chp, "GyroZ: %f\r\n", pIMU->gyroFiltered[Z]);
 
   chprintf(chp, "Roll: %f\r\n", pIMU->euler_angle[Roll]);
   chprintf(chp, "Pitch: %f\r\n", pIMU->euler_angle[Pitch]);
@@ -289,10 +289,10 @@ void cmd_gripper_check(BaseSequentialStream * chp, int argc, char *argv[]){
   (void) argc,argv;
   ChassisEncoder_canStruct* g = can_getExtraMotor() + 6;
   float * E = get_Euler();
-  chprintf(chp,"g :%f\r\n", g ->radian_angle / 36);
-  chprintf(chp,"Euler1 :%f\r\n", E[0]);
-  chprintf(chp,"Euler2 :%f\r\n", E[1]);
-  chprintf(chp,"Euler3 :%f\r\n", E[2]);
+  chprintf(chp,"g :%f\r\n", g ->raw_speed /60 * 2 * M_PI);
+  // chprintf(chp,"Euler1 :%f\r\n", E[0]);
+  // chprintf(chp,"Euler2 :%f\r\n", E[1]);
+  // chprintf(chp,"Euler3 :%f\r\n", E[2]);
   //chprintf(chp,"Euler4 :%f\r\n", E[3]);
 
 
