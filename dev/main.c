@@ -44,7 +44,7 @@ static THD_FUNCTION(Attitude_thread, p)
 
   static const IMUConfigStruct imu1_conf =
     {&SPID5, MPU6500_ACCEL_SCALE_8G, MPU6500_GYRO_SCALE_1000,
-      MPU6500_AXIS_REV_X|MPU6500_AXIS_REV_Y};
+      MPU6500_AXIS_REV_X | MPU6500_AXIS_REV_Y };
   imuInit(pIMU, &imu1_conf);
   imuGetData(pIMU);
 
@@ -130,14 +130,12 @@ int main(void) {
 //  extiinit(); //*
 
   /* Init sequence 2: sensors, comm*/
-  //gyro_init();
   rangeFinder_init();
   attitude_init();
   RC_init();
   judgeinit();
-  //gimbal_init();
   //POWER1_ON();
-  
+
   while(!power_check())
   {
     system_setTempWarningFlag();
@@ -149,7 +147,7 @@ int main(void) {
   chassis_init();
   lift_init();
   //gripper_init();
-  
+
   island_init();
 
   wdgStart(&WDGD1, &wdgcfg); //Start the watchdog

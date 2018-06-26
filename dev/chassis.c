@@ -40,7 +40,6 @@ chassisStruct* chassis_get(void)
 uint32_t chassis_getError(void)
 {
   uint32_t errorFlag = chassis.errorFlag;
-  chassis.errorFlag = 0;
   return errorFlag;
 }
 

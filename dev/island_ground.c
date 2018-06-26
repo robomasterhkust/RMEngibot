@@ -71,7 +71,6 @@ static THD_FUNCTION(Island_thread, p)
 
   chThdSleepSeconds(2);
 
-
   do{
     chThdSleepMilliseconds(1000);
   }while(lift_getError());
@@ -83,16 +82,7 @@ static THD_FUNCTION(Island_thread, p)
   // }while(gripper_getError());
   // gripper_calibrate();
 
-
-  if(!gimbal_getError()){
-    gimbal_calibrate();
-  }
-  else{
-    do{
-      chThdSleepMilliseconds(500);
-    }while(gimbal_getError());
-    gimbal_calibrate();
-  }
+  gimbal_calibrate();
 
   systime_t roller_in_start;
 
@@ -119,11 +109,10 @@ static THD_FUNCTION(Island_thread, p)
 
     uint8_t prev_state = robot_state;
 
-    if(robot_state == STATE_GROUND || (robot_state <= STATE_RUSHDOWN_2 && robot_state >= STATE_HERO_INTERACT_1 ))
-      gimbal_up();
-    else
-      gimbal_down();
-
+  //  if(robot_state == STATE_GROUND || (robot_state <= STATE_RUSHDOWN_2 && robot_state >= STATE_HERO_INTERACT_1 ))
+  //    gimbal_ToStable();
+  //  else
+//      gimbal_ToScreen();
 
     switch(robot_state)
     {
@@ -134,7 +123,7 @@ static THD_FUNCTION(Island_thread, p)
         DOG_RELAX();
         CLOSE_LID();
         gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[4]); //swing back, open hand
-        
+
         chassis_setSpeedLimit(1.0f);
         chassis_setAcclLimit(100);
         chassis_headingLockCmd(DISABLE);
@@ -146,11 +135,14 @@ static THD_FUNCTION(Island_thread, p)
         if(S2 == ASCEND_MODE && (s1_reset && island_ascend()))
         {
           island_robotSetState(STATE_ONFOOT);
+          gimbal_ToScreen();
         }
         else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
           island_robotSetState(STATE_RUSHDOWN_1);//we can change this to resecue mode
         else if(S2 == LOCK_MODE &&(s1_reset && island_ascend()))
+        {
           island_robotSetState(STATE_HERO_INTERACT_1);
+        }
 
         break;
       case STATE_ONFOOT:
@@ -177,7 +169,7 @@ static THD_FUNCTION(Island_thread, p)
             start_yaw = pIMU->euler_angle[Yaw];
             island_robotSetState(STATE_ROLLER_IN);
             roller_in_start = chVTGetSystemTimeX();
-            //no gyro, disable this 
+            //no gyro, disable this
             chassis_headingLockCmd(ENABLE);
           }
           else if(
@@ -192,7 +184,10 @@ static THD_FUNCTION(Island_thread, p)
         }
 
         if(s1_reset && island_decend())
+        {
           island_robotSetState(STATE_GROUND);
+          gimbal_ToStable();
+        }
 
         if(S2 == DECEND_MODE && (s1_reset && island_decend()))
           island_robotSetState(STATE_RUSHDOWN_1);

@@ -123,12 +123,9 @@ static void can_processEncoderMessage(CANDriver* const canp, const CANRxFrame* c
         case CAN_CHASSIS_BR_FEEDBACK_MSG_ID:
           can_processChassisEncoder(&chassis_encoder[BACK_RIGHT] ,rxmsg);
           break;
-        case CAN_GIMBAL_YAW_FEEDBACK_MSG_ID:
+        case CAN_GIMBAL_FEEDBACK_MSG_ID:
           can_processChassisEncoder(&extra_encoder[6] ,rxmsg);
           break;
-        // case CAN_GIMBAL_PITCH_FEEDBACK_MSG_ID:
-        //   can_processGimbalEncoder(&gimbal_encoder[GIMBAL_PITCH] ,rxmsg);
-        //   break;
         case CAN_GIMBAL_SEND_DBUS_ID:
           can_processSendDbusEncoder(&gimbal_send_dbus,rxmsg);
           break;
@@ -231,7 +228,7 @@ void can_processInit(void)
   memset((void *)gimbal_encoder,  0, sizeof(GimbalEncoder_canStruct) *GIMBAL_MOTOR_NUM);
   memset((void *)chassis_encoder, 0, sizeof(ChassisEncoder_canStruct)*CHASSIS_MOTOR_NUM);
   memset((void *)extra_encoder, 0, sizeof(ChassisEncoder_canStruct)*EXTRA_MOTOR_NUM);
-  
+
   uint8_t i;
   for (i = 0; i < CAN_FILTER_NUM; i++)
   {

@@ -228,7 +228,11 @@ void lift_calibrate(void)
 
     chThdSleepMilliseconds(2);
   }
-  //motors[1].pos_sp = offset[1] - 0.1f;
+
+  motors[0].pos_sp = offset[0] - 1.0f;
+  motors[1].pos_sp = offset[1] - 1.0f;
+  motors[2].pos_sp = offset[2] - 1.0f;
+  motors[3].pos_sp = offset[3] - 1.0f;
 
   lift_state = LIFT_RUNNING;
 }

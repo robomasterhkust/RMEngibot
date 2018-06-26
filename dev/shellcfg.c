@@ -76,11 +76,9 @@ static THD_FUNCTION(matlab_thread, p)
       tick = chVTGetSystemTimeX();
     }
 
-    txbuf_f[0] = PIMU->euler_angle[Roll];
-    txbuf_f[1] = PIMU->euler_angle[Pitch];
-    txbuf_f[2] = PIMU->euler_angle[Yaw];
+    txbuf_f[0] = PIMU->euler_angle[Pitch];
 
-    transmit_matlab(chp, NULL, txbuf_f, 0, 3);
+    transmit_matlab(chp, NULL, txbuf_f, 0, 2);
   }
 }
 
@@ -105,26 +103,13 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
 {
   (void) argc,argv;
   PIMUStruct pIMU = imu_get();
-  //PGyroStruct PGyro = gyro_get();
+
+
   chassisStruct* chassis = chassis_get();
+  motorPosStruct* gimbal = gimbal_get();
+  ChassisEncoder_canStruct* gimbal_encoders = can_getExtraMotor() + 6;
 
-  chprintf(chp, "GyroX: %f\r\n", pIMU->gyroFiltered[X]);
-  chprintf(chp, "GyroY: %f\r\n", pIMU->gyroFiltered[Y]);
-  chprintf(chp, "GyroZ: %f\r\n", pIMU->gyroFiltered[Z]);
-
-  chprintf(chp, "Roll: %f\r\n", pIMU->euler_angle[Roll]);
-  chprintf(chp, "Pitch: %f\r\n", pIMU->euler_angle[Pitch]);
-  chprintf(chp, "Yaw: %f\r\n", pIMU->euler_angle[Yaw]);
-
-  // chprintf(chp, "motors0: %f\r\n", chassis->_motors[0].speed_sp);
-  // chprintf(chp, "motors1: %f\r\n", chassis->_motors[1].speed_sp);
-  // chprintf(chp, "motors2: %f\r\n", chassis->_motors[2].speed_sp);
-  // chprintf(chp, "motors3: %f\r\n", chassis->_motors[3].speed_sp);
-
-  // chprintf(chp, "motors0: %f\r\n", chassis->_motors[0]._speed);
-  // chprintf(chp, "motors1: %f\r\n", chassis->_motors[1]._speed);
-  // chprintf(chp, "motors2: %f\r\n", chassis->_motors[2]._speed);
-  // chprintf(chp, "motors3: %f\r\n", chassis->_motors[3]._speed);
+  chprintf(chp, "VEL: %f\r\n", gimbal->_speed);
 }
 
 void cmd_test_RF(BaseSequentialStream * chp, int argc, char *argv[])
@@ -167,7 +152,13 @@ void cmd_error(BaseSequentialStream * chp, int argc, char *argv[])
   if(error)
     chprintf(chp,"LIFT CONNECTION ERROR: %X\r\n", error);
 
-  chprintf(chp, "GRIPPER CONNECTION ERROR: %X\r\n",gripper_getError());
+  error = gimbal_getError();
+  if(error)
+    chprintf(chp,"GIMBAL CONNECTION ERROR\r\n");
+
+  error = gripper_getError();
+  if(error)
+    chprintf(chp, "GRIPPER CONNECTION ERROR: %X\r\n",error);
 
   chassisStruct* chassis = chassis_get();
 
@@ -288,7 +279,6 @@ void cmd_lift_check(BaseSequentialStream * chp, int argc, char *argv[]){
 void cmd_gripper_check(BaseSequentialStream * chp, int argc, char *argv[]){
   (void) argc,argv;
   ChassisEncoder_canStruct* g = can_getExtraMotor() + 6;
-  float * E = get_Euler();
   chprintf(chp,"g :%f\r\n", g ->raw_speed /60 * 2 * M_PI);
   // chprintf(chp,"Euler1 :%f\r\n", E[0]);
   // chprintf(chp,"Euler2 :%f\r\n", E[1]);
