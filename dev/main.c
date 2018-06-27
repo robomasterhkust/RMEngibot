@@ -143,11 +143,11 @@ int main(void) {
   }
 
   /* Init sequence 3: actuators, display*/
-  gimbal_init();
+  
   chassis_init();
   lift_init();
   //gripper_init();
-
+  gimbal_init();
   island_init();
 
   wdgStart(&WDGD1, &wdgcfg); //Start the watchdog

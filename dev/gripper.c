@@ -144,7 +144,7 @@ static int16_t gripper_controlPos
   return (int16_t)(boundOutput(output,output_max));
 }
 
-float output[2];
+
 #define GRIPPER_UPDATE_PERIOD_US  1000000/GRIPPER_CONTROL_FREQ
 static THD_WORKING_AREA(gripper_control_wa, 512);
 static THD_FUNCTION(gripper_control, p)
@@ -152,7 +152,7 @@ static THD_FUNCTION(gripper_control, p)
   (void)p;
   chRegSetThreadName("gripper controller");
 
-  
+  float output[2];
   float output_max[2];
   uint32_t tick = chVTGetSystemTimeX();
   while(true)

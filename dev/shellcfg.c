@@ -270,10 +270,18 @@ void cmd_gyro(BaseSequentialStream * chp, int argc, char *argv[])
 void cmd_lift_check(BaseSequentialStream * chp, int argc, char *argv[]){
   (void) argc,argv;
   motorPosStruct* lifts = lift_get();
-  chprintf(chp,"lift1 :%f\r\n", lifts[0].pos_sp);
-  chprintf(chp,"lift2 :%f\r\n", lifts[1].pos_sp);
-  chprintf(chp,"lift3 :%f\r\n", lifts[2].pos_sp);
-  chprintf(chp,"lift4 :%f\r\n", lifts[3].pos_sp);
+  chprintf(chp,"lift1sp :%f\r\n", lifts[0].pos_sp);
+  chprintf(chp,"lift2sp :%f\r\n", lifts[1].pos_sp);
+  chprintf(chp,"lift3sp :%f\r\n", lifts[2].pos_sp);
+  chprintf(chp,"lift4sp :%f\r\n", lifts[3].pos_sp);
+  chprintf(chp,"lift1p :%f\r\n", lifts[0]._pos);
+  chprintf(chp,"lift2p :%f\r\n", lifts[1]._pos);
+  chprintf(chp,"lift3p :%f\r\n", lifts[2]._pos);
+  chprintf(chp,"lift4p :%f\r\n", lifts[3]._pos);
+
+
+
+
 }
 
 void cmd_gripper_check(BaseSequentialStream * chp, int argc, char *argv[]){
@@ -301,7 +309,7 @@ static const ShellCommand commands[] =
   {"temp", cmd_temp},
   {"gyro", cmd_gyro},
   {"WTF", cmd_error},
-  {"lift_check",cmd_lift_check},
+  {"l",cmd_lift_check},
   {"g",cmd_gripper_check},
   {"\xEE", cmd_data},
   #ifdef PARAMS_USE_USB
