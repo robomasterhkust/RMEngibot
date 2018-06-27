@@ -5,7 +5,8 @@
 
 #define LIFT_CAN   &CAND2
 #define LIFT_CAN_EID  0x1FF
-#define LIFT_GEAR_RATIO 27U
+
+#define LIFT_GEAR_RATIO 19U
 #define LIFT_CONTROL_FREQ 500U
 #define LIFT_MOTOR_NUM 4U
 

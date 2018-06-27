@@ -264,7 +264,8 @@ static void drive_kinematics(const float strafe_vel, const float drive_vel, cons
   #endif
 
   can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID,
-      	output[FRONT_RIGHT], output[FRONT_LEFT],output[BACK_LEFT], output[BACK_RIGHT]); //FL,FR,BR,BL
+
+      	output[FRONT_RIGHT], output[FRONT_LEFT], output[BACK_LEFT],output[BACK_RIGHT] ); 
 }
 
 /*

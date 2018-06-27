@@ -18,6 +18,7 @@ static gripper_state_t gripper_state = GRIPPER_UNINIT;
 static float pos_cmd1 = 0.0f;
 static gripper_error_t gripper_error = 0;
 static RC_Ctl_t* rc;
+
 motorPosStruct* gripper_get(void)
 {
   return motors;
@@ -87,7 +88,8 @@ static void gripper_encoderUpdate(void)
     }
 
     if((motors[i].pos_sp - motors[i]._pos) < 2 * M_PI &&
-       (motors[i].pos_sp - motors[i]._pos) > -2 * M_PI)
+
+     (motors[i].pos_sp - motors[i]._pos) > -2 * M_PI)
       motors[i].in_position++;
     else
       motors[i].in_position = 0;
@@ -132,18 +134,21 @@ void gripper_changePos(const float pos_sp1, const float pos_sp2)
 
 
 static int16_t gripper_controlPos
-  (const motorPosStruct* const motor, pid_controller_t* const controller,
+
+(const motorPosStruct* const motor, pid_controller_t* const controller,
+
   const int16_t output_max)
 {
   float error = motor->pos_sp - motor->_pos;
   controller->error_int += error * controller->ki;
   controller->error_int = boundOutput(controller->error_int, controller->error_int_max);
   float output =
-    error*controller->kp + controller->error_int - motor->_speed * controller->kd;
+
+  error*controller->kp + controller->error_int - motor->_speed * controller->kd;
+
 
   return (int16_t)(boundOutput(output,output_max));
 }
-
 
 #define GRIPPER_UPDATE_PERIOD_US  1000000/GRIPPER_CONTROL_FREQ
 static THD_WORKING_AREA(gripper_control_wa, 512);
@@ -164,14 +169,7 @@ static THD_FUNCTION(gripper_control, p)
     {
       tick = chVTGetSystemTimeX();
     }
-
-
-
     gripper_encoderUpdate();
-
-
-
-
     uint8_t i;
     for(i = 0; i < GRIPPER_MOTOR_NUM; i++)
     {
@@ -184,11 +182,13 @@ static THD_FUNCTION(gripper_control, p)
         output_max[i] = gripper_output_max[i];
 
       output[i] =
-         gripper_controlPos(&motors[i], &controllers[i], output_max[i]);
+
+      gripper_controlPos(&motors[i], &controllers[i], output_max[i]);
     }
 
     can_motorSetCurrent(GRIPPER_CAN, GRIPPER_CAN_EID,
-        output[0], output[1], 0, 0);
+      output[0], output[1], 0, 0);
+
   }
 }
 
@@ -277,5 +277,5 @@ void gripper_init(void)
   gripper_state = GRIPPER_INITING;
 
   chThdCreateStatic(gripper_control_wa, sizeof(gripper_control_wa),
-                          NORMALPRIO, gripper_control, NULL);
+    NORMALPRIO, gripper_control, NULL);
 }

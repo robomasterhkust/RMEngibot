@@ -15,7 +15,8 @@ static lift_state_t lift_state = 0;
 static lift_error_t lift_error = 0;
 
 static ChassisEncoder_canStruct* encoders;
-static motorPosStruct motors[4];
+
+static volatile motorPosStruct motors[4];
 static float offset[4];
 static lpfilterStruct lp_speed[4];
 
@@ -37,9 +38,9 @@ lift_error_t lift_getError(void)
 bool lift_inPosition(void)
 {
   return motors[0].in_position == LIFT_IN_POSITION_COUNT
-    && motors[1].in_position == LIFT_IN_POSITION_COUNT
-    && motors[2].in_position == LIFT_IN_POSITION_COUNT
-    && motors[3].in_position == LIFT_IN_POSITION_COUNT;
+  && motors[1].in_position == LIFT_IN_POSITION_COUNT
+  && motors[2].in_position == LIFT_IN_POSITION_COUNT
+  && motors[3].in_position == LIFT_IN_POSITION_COUNT;
 }
 
 #define   LIFT_ANGLE_PSC 7.6699e-4 //2*M_PI/0x1FFF
@@ -66,8 +67,9 @@ static void lift_encoderUpdate(void)
       //Check validiaty of can connection
       encoders[i].updated = false;
 
-       float pos_input = encoders[i].raw_angle*LIFT_ANGLE_PSC;
-       float speed_input = encoders[i].raw_speed*LIFT_SPEED_PSC;
+
+      float pos_input = encoders[i].raw_angle*LIFT_ANGLE_PSC;
+      float speed_input = encoders[i].raw_speed*LIFT_SPEED_PSC;
 
       // if((motors[i]._prev < 0.6f && pos_input > 5.68f) ||
       //   (speed_input < -80.0f && pos_input > motors[i]._prev))
@@ -152,53 +154,55 @@ void lift_calibrate(void)
   chThdSleepMilliseconds(500);
 
   #ifdef LIFT_USE_LS
-   while(init_state < 0x0f)
-   {
-     if(!LS2_DOWN())
-       motors[0].pos_sp+= 0.02f;
-     else
-     {
-       init_state |= 0x01;
-       offset[0] = motors[0]._pos;
-     }
-     if(!LS1_DOWN())
-       motors[1].pos_sp+= 0.02f;
-     else
-     {
-       init_state |= 0x02;
-       offset[1] = motors[1]._pos;
-     }
-     if(!LS0_DOWN())
-       motors[2].pos_sp+= 0.02f;
-     else
-     {
-       init_state |= 0x04;
-       offset[2] = motors[2]._pos;
-     }
-     if(!LS3_DOWN())
-       motors[3].pos_sp+= 0.02f;
-     else
-     {
-       init_state |= 0x08;
-       offset[3] = motors[3]._pos;
-     }
 
-     chThdSleepMilliseconds(2);
-  }
+  while(init_state < 0x0f)
+  {
+   if(!LS2_DOWN())
+     motors[0].pos_sp+= 0.02f;
+   else
+   {
+     init_state |= 0x01;
+     offset[0] = motors[0]._pos;
+   }
+   if(!LS1_DOWN())
+     motors[1].pos_sp+= 0.02f;
+   else
+   {
+     init_state |= 0x02;
+     offset[1] = motors[1]._pos;
+   }
+   if(!LS0_DOWN())
+     motors[2].pos_sp+= 0.02f;
+   else
+   {
+     init_state |= 0x04;
+     offset[2] = motors[2]._pos;
+   }
+   if(!LS3_DOWN())
+     motors[3].pos_sp+= 0.02f;
+   else
+   {
+     init_state |= 0x08;
+     offset[3] = motors[3]._pos;
+   }
+
+   chThdSleepMilliseconds(2);
+ }
   #endif
 
-  bool init_state[LIFT_MOTOR_NUM] = {0, 0,0,0};
+ bool init_state[LIFT_MOTOR_NUM] = {0, 0,0,0};
 
-  float prev_pos[LIFT_MOTOR_NUM];
+ float prev_pos[LIFT_MOTOR_NUM];
 
-  uint8_t init_count = 0;
-  uint8_t stall_count[LIFT_MOTOR_NUM] = {0,0,0,0};
+ uint8_t init_count = 0;
+ uint8_t stall_count[LIFT_MOTOR_NUM] = {0,0,0,0};
 
-  const float motor_step[LIFT_MOTOR_NUM] = {0.02f, 0.02f,0.02f,0.02f};
+ const float motor_step[LIFT_MOTOR_NUM] = {0.02f, 0.02f,0.02f,0.02f};
 
-  while(init_count < LIFT_MOTOR_NUM)
-  {
-    uint8_t i;
+ while(init_count < LIFT_MOTOR_NUM)
+ {
+  uint8_t i;
+
     init_count = 0;  //finish initialization only if all motor calibration finishes
     for (i = 0; i < LIFT_MOTOR_NUM; i++)
     {
@@ -245,14 +249,13 @@ void lift_calibrate(void)
 #define LIFT_GOING_DOWN 2
 
 static int16_t lift_controlPos
-  (const motorPosStruct* const motor, pid_controller_t* const controller,const int16_t output_max)
+(const motorPosStruct* const motor, pid_controller_t* const controller,const int16_t output_max)
 {
   float error = motor->pos_sp - motor->_pos;
   controller->error_int += error * controller->ki;
   controller->error_int = boundOutput(controller->error_int, controller->error_int_max);
   float output =
-    error*controller->kp + controller->error_int - motor->_speed * controller->kd;
-
+  error*controller->kp + controller->error_int - motor->_speed * controller->kd ;
   return (int16_t)(boundOutput(output,output_max));
 }
 
@@ -262,7 +265,6 @@ static THD_FUNCTION(lift_control, p)
   (void)p;
   chRegSetThreadName("lift wheel controller");
 
-  //float output[4];
   float output_max[4];
   uint32_t tick = chVTGetSystemTimeX();
   while(true)
@@ -295,19 +297,22 @@ static THD_FUNCTION(lift_control, p)
     //     transition[i] = LIFT_IDLE;
     // }
 
+
     for(i = 0; i < 4; i++){
 
       if(lift_state == LIFT_INITING)
       {
-          output_max[i] = 4000;
+
+        output_max[i] = 4000;
       }
       else
         output_max[i] =  OUTPUT_MAX;
       output[i] = lift_controlPos(&motors[i], &controllers[i],output_max[i]);
     }
-     can_motorSetCurrent(LIFT_CAN, LIFT_CAN_EID,
-          output[3], output[2], output[1], output[0]);
-    
+
+    can_motorSetCurrent(LIFT_CAN, LIFT_CAN_EID,
+     output[FRONT_RIGHT], output[FRONT_LEFT], output[BACK_LEFT],output[BACK_RIGHT] ); 
+
   }
 
 }
@@ -316,7 +321,6 @@ static const FRLName = "FR_lift";
 static const FLLName = "FL_lift";
 static const BLLName = "BL_lift";
 static const BRLName = "BR_lift";
-
 #define LIFT_ERROR_INT_MAX  30000
 void lift_init(void)
 {
@@ -334,13 +338,12 @@ void lift_init(void)
     controllers[i].error_int = 0.0f;
     controllers[i].error_int_max = LIFT_ERROR_INT_MAX;
   }
-  params_set(&controllers[0], 13,3,BLLName,subname_PID,PARAM_PUBLIC);
-  params_set(&controllers[1], 14,3,BRLName,subname_PID,PARAM_PUBLIC);
-  params_set(&controllers[2], 15,3,FRLName,subname_PID,PARAM_PUBLIC);
-  params_set(&controllers[3], 16,3,FLLName,subname_PID,PARAM_PUBLIC);
+
+  params_set(&controllers[0], 13,3,FRLName,subname_PID,PARAM_PUBLIC);
+  params_set(&controllers[1], 14,3,FLLName,subname_PID,PARAM_PUBLIC);
+  params_set(&controllers[2], 15,3,BLLName,subname_PID,PARAM_PUBLIC);
+  params_set(&controllers[3], 16,3,BRLName,subname_PID,PARAM_PUBLIC);
   lift_state = LIFT_INITING;
   chThdCreateStatic(lift_control_wa, sizeof(lift_control_wa),
-                          NORMALPRIO, lift_control, NULL);
-
-
+    NORMALPRIO, lift_control, NULL);
 }
