@@ -15,11 +15,9 @@ static lift_state_t lift_state = 0;
 static lift_error_t lift_error = 0;
 
 static ChassisEncoder_canStruct* encoders;
-
 static volatile motorPosStruct motors[4];
 static float offset[4];
 static lpfilterStruct lp_speed[4];
-
 static float output[4];
 static pid_controller_t controllers[4];
 
@@ -67,7 +65,6 @@ static void lift_encoderUpdate(void)
       //Check validiaty of can connection
       encoders[i].updated = false;
 
-
       float pos_input = encoders[i].raw_angle*LIFT_ANGLE_PSC;
       float speed_input = encoders[i].raw_speed*LIFT_SPEED_PSC;
 
@@ -109,7 +106,7 @@ static void lift_encoderUpdate(void)
 }
 
 void lift_changePos(const float pos_sp1, const float pos_sp2,
-                    const float pos_sp3, const float pos_sp4)
+  const float pos_sp3, const float pos_sp4)
 {
   if(offset[0] - pos_sp1 != motors[0].pos_sp)
   {
@@ -154,7 +151,6 @@ void lift_calibrate(void)
   chThdSleepMilliseconds(500);
 
   #ifdef LIFT_USE_LS
-
   while(init_state < 0x0f)
   {
    if(!LS2_DOWN())
@@ -202,7 +198,6 @@ void lift_calibrate(void)
  while(init_count < LIFT_MOTOR_NUM)
  {
   uint8_t i;
-
     init_count = 0;  //finish initialization only if all motor calibration finishes
     for (i = 0; i < LIFT_MOTOR_NUM; i++)
     {
@@ -256,6 +251,7 @@ static int16_t lift_controlPos
   controller->error_int = boundOutput(controller->error_int, controller->error_int_max);
   float output =
   error*controller->kp + controller->error_int - motor->_speed * controller->kd ;
+
   return (int16_t)(boundOutput(output,output_max));
 }
 
@@ -265,6 +261,7 @@ static THD_FUNCTION(lift_control, p)
   (void)p;
   chRegSetThreadName("lift wheel controller");
 
+  
   float output_max[4];
   uint32_t tick = chVTGetSystemTimeX();
   while(true)
@@ -281,38 +278,18 @@ static THD_FUNCTION(lift_control, p)
 
     uint8_t i;
 
-    // for (i = 0; i < 4; i++)
-    // {
-    //   if(fabsf(motors[i].pos_sp) > ONFOOT_TRANSITION_TH && on_foot[i] < ONFOOT_TRANSITION_PERIOD)
-    //     transition[i] = LIFT_GOING_UP;
-    //   if(fabsf(motors[i].pos_sp < ONFOOT_TRANSITION_TH && on_foot[i] > 0))
-    //     transition[i] = LIFT_GOING_DOWN;
-
-    //   if(transition[i] == LIFT_GOING_UP)
-    //     on_foot[i]++;
-    //   else if(transition[i] == LIFT_GOING_DOWN)
-    //     on_foot[i]--;
-
-    //   if(on_foot[i] == 0 || on_foot[i] == ONFOOT_TRANSITION_PERIOD)
-    //     transition[i] = LIFT_IDLE;
-    // }
-
-
     for(i = 0; i < 4; i++){
 
       if(lift_state == LIFT_INITING)
       {
-
         output_max[i] = 4000;
       }
       else
         output_max[i] =  OUTPUT_MAX;
       output[i] = lift_controlPos(&motors[i], &controllers[i],output_max[i]);
     }
-
     can_motorSetCurrent(LIFT_CAN, LIFT_CAN_EID,
      output[FRONT_RIGHT], output[FRONT_LEFT], output[BACK_LEFT],output[BACK_RIGHT] ); 
-
   }
 
 }
@@ -321,6 +298,7 @@ static const FRLName = "FR_lift";
 static const FLLName = "FL_lift";
 static const BLLName = "BL_lift";
 static const BRLName = "BR_lift";
+
 #define LIFT_ERROR_INT_MAX  30000
 void lift_init(void)
 {
@@ -338,7 +316,6 @@ void lift_init(void)
     controllers[i].error_int = 0.0f;
     controllers[i].error_int_max = LIFT_ERROR_INT_MAX;
   }
-
   params_set(&controllers[0], 13,3,FRLName,subname_PID,PARAM_PUBLIC);
   params_set(&controllers[1], 14,3,FLLName,subname_PID,PARAM_PUBLIC);
   params_set(&controllers[2], 15,3,BLLName,subname_PID,PARAM_PUBLIC);
@@ -346,4 +323,6 @@ void lift_init(void)
   lift_state = LIFT_INITING;
   chThdCreateStatic(lift_control_wa, sizeof(lift_control_wa),
     NORMALPRIO, lift_control, NULL);
+
+
 }

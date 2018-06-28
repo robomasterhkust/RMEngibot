@@ -134,7 +134,7 @@ int main(void) {
   attitude_init();
   RC_init();
   judgeinit();
-
+  
   while(!power_check())
   {
     system_setTempWarningFlag();
@@ -142,7 +142,6 @@ int main(void) {
   }
 
   /* Init sequence 3: actuators, display*/
-
   gimbal_init();
   chassis_init();
   lift_init();
