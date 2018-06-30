@@ -5,7 +5,7 @@
 #include "params.h"
 #include "canBusProcess.h"
 #include "math_misc.h"
-
+#include "dbus.h"
 #include "system_error.h"
 
 #define LIFT_IN_POSITION_COUNT 50U
@@ -13,13 +13,15 @@
 
 static lift_state_t lift_state = 0;
 static lift_error_t lift_error = 0;
-
+static RC_Ctl_t* rc;
 static ChassisEncoder_canStruct* encoders;
 static volatile motorPosStruct motors[4];
 static float offset[4];
 static lpfilterStruct lp_speed[4];
 static float output[4];
 static pid_controller_t controllers[4];
+
+static float pos_cmd = 0;
 
 motorPosStruct* lift_get(void)
 {
@@ -197,6 +199,9 @@ void lift_calibrate(void)
 
  while(init_count < LIFT_MOTOR_NUM)
  {
+
+
+
   uint8_t i;
     init_count = 0;  //finish initialization only if all motor calibration finishes
     for (i = 0; i < LIFT_MOTOR_NUM; i++)
@@ -276,6 +281,18 @@ static THD_FUNCTION(lift_control, p)
 
     lift_encoderUpdate();
 
+    int16_t input = rc->rc.channel3 - RC_CH_VALUE_OFFSET +
+                    ((rc->keyboard.key_code & KEY_Q) - (rc->keyboard.key_code & KEY_E)) * 200;
+    if(input > 400)
+      pos_cmd += 0.1f;
+    else if(input > 100)
+      pos_cmd += 0.025f;
+    else if(input < -400)
+      pos_cmd -= 0.1f;
+    else if(input < -100)
+      pos_cmd -= 0.025f;
+    lift_changePos(-pos_cmd,-pos_cmd,-pos_cmd,-pos_cmd);
+
     uint8_t i;
 
     for(i = 0; i < 4; i++){
@@ -304,6 +321,7 @@ void lift_init(void)
 {
   memset(&motors, 0, sizeof(motorPosStruct)*4);
   encoders = can_getExtraMotor();
+  rc = RC_get();
   uint8_t i;
   for (i = 0; i < 4; i++) {
     lpfilter_init(lp_speed + i, LIFT_CONTROL_FREQ, 24);

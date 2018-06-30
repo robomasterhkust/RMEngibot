@@ -15,7 +15,6 @@ static bool in_position[GRIPPER_MOTOR_NUM] = {0 , 0};
 
 static pid_controller_t controllers[GRIPPER_MOTOR_NUM];
 static gripper_state_t gripper_state = GRIPPER_UNINIT;
-static float pos_cmd1 = 0.0f;
 static gripper_error_t gripper_error = 0;
 static RC_Ctl_t* rc;
 

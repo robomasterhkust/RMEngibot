@@ -135,19 +135,19 @@ int main(void) {
   RC_init();
   judgeinit();
   
-  while(!power_check())
-  {
-    system_setTempWarningFlag();
-    chThdSleepMilliseconds(100);
-  }
+  // while(!power_check())
+  // {
+  //   system_setTempWarningFlag();
+  //   chThdSleepMilliseconds(100);
+  // }
 
   /* Init sequence 3: actuators, display*/
-  gimbal_init();
+  //gimbal_init();
   chassis_init();
   lift_init();
   //gripper_init();
 
-  island_init();
+  //island_init();
 
   wdgStart(&WDGD1, &wdgcfg); //Start the watchdog
 
