@@ -238,7 +238,7 @@ void lift_calibrate(void)
   lift_state = LIFT_RUNNING;
 }
 
-#define OUTPUT_MAX  16384
+#define OUTPUT_MAX  16383
 
 #define ONFOOT_TRANSITION_TIME_MS   100
 #define ONFOOT_TRANSITION_TH        20.0f
@@ -266,7 +266,7 @@ static THD_FUNCTION(lift_control, p)
   (void)p;
   chRegSetThreadName("lift wheel controller");
 
-  
+
   float output_max[4];
   uint32_t tick = chVTGetSystemTimeX();
   while(true)
@@ -281,6 +281,7 @@ static THD_FUNCTION(lift_control, p)
 
     lift_encoderUpdate();
 
+    //====================LIFT TEST AREA=====================================
     int16_t input = rc->rc.channel3 - RC_CH_VALUE_OFFSET +
                     ((rc->keyboard.key_code & KEY_Q) - (rc->keyboard.key_code & KEY_E)) * 200;
     if(input > 400)
@@ -291,6 +292,26 @@ static THD_FUNCTION(lift_control, p)
       pos_cmd -= 0.1f;
     else if(input < -100)
       pos_cmd -= 0.025f;
+
+    static uint8_t rc_reset;
+
+    if(rc_reset)
+    {
+      if(rc->rc.s1 == RC_S_UP)
+      {
+        pos_cmd += 15.0f;
+        rc_reset = false;
+      }
+      else if(rc->rc.s1 == RC_S_DOWN)
+      {
+        pos_cmd -= 2.0f;
+        rc_reset = false;
+      }
+    }
+    rc_reset = rc->rc.s1 == RC_S_MIDDLE;
+
+
+    //=======================================================================
     lift_changePos(-pos_cmd,-pos_cmd,-pos_cmd,-pos_cmd);
 
     uint8_t i;
@@ -306,7 +327,7 @@ static THD_FUNCTION(lift_control, p)
       output[i] = lift_controlPos(&motors[i], &controllers[i],output_max[i]);
     }
     can_motorSetCurrent(LIFT_CAN, LIFT_CAN_EID,
-     output[FRONT_RIGHT], output[FRONT_LEFT], output[BACK_LEFT],output[BACK_RIGHT] ); 
+     output[FRONT_RIGHT], output[FRONT_LEFT], output[BACK_LEFT],output[BACK_RIGHT] );
   }
 
 }
@@ -316,7 +337,7 @@ static const FLLName = "FL_lift";
 static const BLLName = "BL_lift";
 static const BRLName = "BR_lift";
 
-#define LIFT_ERROR_INT_MAX  30000
+#define LIFT_ERROR_INT_MAX  15000
 void lift_init(void)
 {
   memset(&motors, 0, sizeof(motorPosStruct)*4);
