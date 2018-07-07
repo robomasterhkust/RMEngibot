@@ -270,6 +270,7 @@ void cmd_gyro(BaseSequentialStream * chp, int argc, char *argv[])
 void cmd_lift_check(BaseSequentialStream * chp, int argc, char *argv[]){
   (void) argc,argv;
   motorPosStruct* lifts = lift_get();
+  
   chprintf(chp,"lift1 :%f\r\n", lifts[0].pos_sp);
   chprintf(chp,"lift2 :%f\r\n", lifts[1].pos_sp);
   chprintf(chp,"lift3 :%f\r\n", lifts[2].pos_sp);

@@ -17,8 +17,8 @@ static pid_controller_t controllers[GRIPPER_MOTOR_NUM];
 static gripper_state_t gripper_state = GRIPPER_UNINIT;
 static gripper_error_t gripper_error = 0;
 static RC_Ctl_t* rc;
-
-
+static float pos_cmd = 0 ;
+static float pos_cmd1 = 0 ;
 motorPosStruct* gripper_get(void)
 {
   return motors;
@@ -113,16 +113,16 @@ void gripper_changePos(const float pos_sp1, const float pos_sp2)
   while(offset[0] - pos_sp1 != motors[0].pos_sp){
     in_position[0] = false;
 
-    if(ABS(offset[0] - pos_sp1 - motors[0].pos_sp) < 0.01){
+    if(ABS(offset[0] - pos_sp1 - motors[0].pos_sp) < 0.008){
       in_position[0] = false;
       motors[0].pos_sp = offset[0] - pos_sp1;
     }
     else{
       if(offset[0] - pos_sp1 - motors[0].pos_sp > 0 ){
-        motors[0].pos_sp += 0.01;
+        motors[0].pos_sp += 0.008;
       }
       else{
-        motors[0].pos_sp -= 0.01;
+        motors[0].pos_sp -= 0.008;
       }
     }
     chThdSleepMilliseconds(2);
@@ -171,6 +171,50 @@ static THD_FUNCTION(gripper_control, p)
     gripper_encoderUpdate();
 
 
+  // //=========================gripper test============================//
+   //  int16_t input = rc->rc.channel1 - RC_CH_VALUE_OFFSET +
+   //                  ((rc->keyboard.key_code & KEY_Q) - (rc->keyboard.key_code & KEY_E)) * 200;
+   //  if(input > 400)
+   //    pos_cmd += 0.01f;
+   //  else if(input > 100)
+   //    pos_cmd += 0.0025f;
+   //  else if(input < -400)
+   //    pos_cmd -= 0.01f;
+   //  else if(input < -100)
+   //    pos_cmd -= 0.0025f;
+
+   // int16_t input1 = rc->rc.channel0 - RC_CH_VALUE_OFFSET +
+   //                  ((rc->keyboard.key_code & KEY_Q) - (rc->keyboard.key_code & KEY_E)) * 200;
+   //  if(input1 > 400)
+   //    pos_cmd1 += 0.1f;
+   //  else if(input1 > 100)
+   //    pos_cmd1 += 0.025f;
+   //  else if(input1 < -400)
+   //    pos_cmd1 -= 0.1f;
+   //  else if(input1 < -100)
+   //    pos_cmd1 -= 0.025f;
+   //  // static uint8_t rc_reset;
+
+   //  // if(rc_reset)
+   //  // {
+   //  //   if(rc->rc.s1 == RC_S_UP)
+   //  //   {
+   //  //     pos_cmd += 15.0f;
+   //  //     rc_reset = false;
+   //  //   }
+   //  //   else if(rc->rc.s1 == RC_S_DOWN)
+   //  //   {
+   //  //     pos_cmd -= 2.0f;
+   //  //     rc_reset = false;
+   //  //   }
+   //  // }
+   //  // rc_reset = rc->rc.s1 == RC_S_MIDDLE;
+
+   //  //if(gripper_state != GRIPPER_INITING)
+   //  //gripper_changePos(-pos_cmd,-pos_cmd,-pos_cmd,-pos_cmd);
+   //  if(gripper_state != GRIPPER_INITING)
+   //    gripper_changePos(pos_cmd,pos_cmd1);
+    //========================================
 
 
     uint8_t i;
@@ -187,6 +231,8 @@ static THD_FUNCTION(gripper_control, p)
       output[i] =
       gripper_controlPos(&motors[i], &controllers[i], output_max[i]);
     }
+    // if(in_position[1] == true)
+    //   output[1] =  0 ;
 
     can_motorSetCurrent(GRIPPER_CAN, GRIPPER_CAN_EID,
       output[0], output[1], 0, 0);
@@ -206,7 +252,7 @@ void gripper_calibrate(void)
   uint8_t init_count = 0;
   uint8_t stall_count[GRIPPER_MOTOR_NUM] = {0, 0};
 
-  const float motor_step[GRIPPER_MOTOR_NUM] = {0.002f, 0.02f};
+  const float motor_step[GRIPPER_MOTOR_NUM] = {0.006f, 0.06f};
   BUZZER(500);
   chThdSleepMilliseconds(500);
   BUZZER(0);
@@ -242,9 +288,10 @@ void gripper_calibrate(void)
       init_count += init_state[i] ? 1 : 0;
     }
 
-    chThdSleepMilliseconds(2);
+    chThdSleepMilliseconds(6);
   }
-  motors[1].pos_sp = offset[1] - 0.1f;
+  motors[1].pos_sp = offset[1] - 0.5f;
+  motors[0].pos_sp = offset[0] - 0.2f;
   gripper_state = GRIPPER_RUNNING;
 
   
@@ -274,7 +321,7 @@ void gripper_init(void)
   }
   params_set(&controllers[0], 20,3,ArmName, subname_PID,PARAM_PUBLIC);
   params_set(&controllers[1], 21,3,HandName,subname_PID,PARAM_PUBLIC);
-
+  //testing 
   gripper_state = GRIPPER_INITING;
 
   chThdCreateStatic(gripper_control_wa, sizeof(gripper_control_wa),

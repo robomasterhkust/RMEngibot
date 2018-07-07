@@ -134,21 +134,18 @@ int main(void) {
   attitude_init();
   RC_init();
   judgeinit();
-  
-  // while(!power_check())
-  // {
-  //   system_setTempWarningFlag();
-  //   chThdSleepMilliseconds(100);
-  // }
+  while(!power_check())
+  {
+    system_setTempWarningFlag();
+    chThdSleepMilliseconds(100);
+  }
 
   /* Init sequence 3: actuators, display*/
   //gimbal_init();
   chassis_init();
   lift_init();
-  //gripper_init();
-
-  //island_init();
-
+  gripper_init();
+  island_init();
   wdgStart(&WDGD1, &wdgcfg); //Start the watchdog
 
   while (true)
@@ -223,9 +220,9 @@ void PWM12_setWidth(const uint8_t id, const uint16_t width)
   */
 bool power_check(void)
 {
-  ChassisEncoder_canStruct* can = can_getChassisMotor();
-
-  return can->updated;
+  ChassisEncoder_canStruct* can1 = can_getChassisMotor();
+  ChassisEncoder_canStruct* can2 =  can_getExtraMotor();
+  return can1->updated || can2->updated;
 }
 
 /**

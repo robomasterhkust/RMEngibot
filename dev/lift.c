@@ -92,7 +92,7 @@ static void lift_encoderUpdate(void)
       {
         motors[i]._wait_count = 1;
         lift_error |= LIFT0_NOT_CONNECTED << i;
-
+        //just for test, remember to turn this on 
         lift_kill();
       }
     }
@@ -110,25 +110,25 @@ static void lift_encoderUpdate(void)
 void lift_changePos(const float pos_sp1, const float pos_sp2,
   const float pos_sp3, const float pos_sp4)
 {
-  if(offset[0] - pos_sp1 != motors[0].pos_sp)
+  if(offset[0] + pos_sp1 != motors[0].pos_sp)
   {
     motors[0].in_position = 0;
-    motors[0].pos_sp = offset[0] - pos_sp1;
+    motors[0].pos_sp = offset[0] + pos_sp1;
   }
-  if(offset[1] - pos_sp2 != motors[1].pos_sp)
+  if(offset[1] + pos_sp2 != motors[1].pos_sp)
   {
     motors[1].in_position = 0;
-    motors[1].pos_sp = offset[1] - pos_sp2;
+    motors[1].pos_sp = offset[1] + pos_sp2;
   }
-  if(offset[2] - pos_sp3 != motors[2].pos_sp)
+  if(offset[2] + pos_sp3 != motors[2].pos_sp)
   {
     motors[2].in_position = 0;
-    motors[2].pos_sp = offset[2] - pos_sp3;
+    motors[2].pos_sp = offset[2] + pos_sp3;
   }
-  if(offset[3] - pos_sp4 != motors[3].pos_sp)
+  if(offset[3] + pos_sp4 != motors[3].pos_sp)
   {
     motors[3].in_position = 0;
-    motors[3].pos_sp = offset[3] - pos_sp4;
+    motors[3].pos_sp = offset[3] + pos_sp4;
   }
 }
 #define STALL_COUNT_MAX 100
@@ -156,28 +156,28 @@ void lift_calibrate(void)
   while(init_state < 0x0f)
   {
    if(!LS2_DOWN())
-     motors[0].pos_sp+= 0.02f;
+     motors[0].pos_sp-= 0.02f;
    else
    {
      init_state |= 0x01;
      offset[0] = motors[0]._pos;
    }
    if(!LS1_DOWN())
-     motors[1].pos_sp+= 0.02f;
+     motors[1].pos_sp-= 0.02f;
    else
    {
      init_state |= 0x02;
      offset[1] = motors[1]._pos;
    }
    if(!LS0_DOWN())
-     motors[2].pos_sp+= 0.02f;
+     motors[2].pos_sp-= 0.02f;
    else
    {
      init_state |= 0x04;
      offset[2] = motors[2]._pos;
    }
    if(!LS3_DOWN())
-     motors[3].pos_sp+= 0.02f;
+     motors[3].pos_sp-= 0.02f;
    else
    {
      init_state |= 0x08;
@@ -195,7 +195,7 @@ void lift_calibrate(void)
  uint8_t init_count = 0;
  uint8_t stall_count[LIFT_MOTOR_NUM] = {0,0,0,0};
 
- const float motor_step[LIFT_MOTOR_NUM] = {0.02f, 0.02f,0.02f,0.02f};
+ const float motor_step[LIFT_MOTOR_NUM] = {0.3f, 0.3f,0.3f,0.3f};
 
  while(init_count < LIFT_MOTOR_NUM)
  {
@@ -208,7 +208,7 @@ void lift_calibrate(void)
     {
       if(stall_count[i] < STALL_COUNT_MAX)
       {
-        motors[i].pos_sp += motor_step[i];
+        motors[i].pos_sp -= motor_step[i];
         if(motors[i]._pos - prev_pos[i] < motor_step[i] * 0.2f)
           stall_count[i]++;
         else if(stall_count[i] > 10)
@@ -227,13 +227,14 @@ void lift_calibrate(void)
       init_count += init_state[i] ? 1 : 0;
     }
 
-    chThdSleepMilliseconds(2);
+    chThdSleepMilliseconds(30);
   }
 
-  motors[0].pos_sp = offset[0] - 1.0f;
-  motors[1].pos_sp = offset[1] - 1.0f;
-  motors[2].pos_sp = offset[2] - 1.0f;
-  motors[3].pos_sp = offset[3] - 1.0f;
+  // motors[0].pos_sp = offset[0] + 1.0f;
+  // motors[1].pos_sp = offset[1] + 1.0f;
+  // motors[2].pos_sp = offset[2] + 1.0f;
+  // motors[3].pos_sp = offset[3] + 1.0f;
+  lift_changePos(2,2,2,2);
 
   lift_state = LIFT_RUNNING;
 }
@@ -281,38 +282,38 @@ static THD_FUNCTION(lift_control, p)
 
     lift_encoderUpdate();
 
-    //====================LIFT TEST AREA=====================================
-    int16_t input = rc->rc.channel3 - RC_CH_VALUE_OFFSET +
-                    ((rc->keyboard.key_code & KEY_Q) - (rc->keyboard.key_code & KEY_E)) * 200;
-    if(input > 400)
-      pos_cmd += 0.1f;
-    else if(input > 100)
-      pos_cmd += 0.025f;
-    else if(input < -400)
-      pos_cmd -= 0.1f;
-    else if(input < -100)
-      pos_cmd -= 0.025f;
+    // //====================LIFT TEST AREA=====================================
+    // int16_t input = rc->rc.channel3 - RC_CH_VALUE_OFFSET +
+    //                 ((rc->keyboard.key_code & KEY_Q) - (rc->keyboard.key_code & KEY_E)) * 200;
+    // if(input > 400)
+    //   pos_cmd += 0.1f;
+    // else if(input > 100)
+    //   pos_cmd += 0.025f;
+    // else if(input < -400)
+    //   pos_cmd -= 0.1f;
+    // else if(input < -100)
+    //   pos_cmd -= 0.025f;
 
-    static uint8_t rc_reset;
+    // static uint8_t rc_reset;
 
-    if(rc_reset)
-    {
-      if(rc->rc.s1 == RC_S_UP)
-      {
-        pos_cmd += 15.0f;
-        rc_reset = false;
-      }
-      else if(rc->rc.s1 == RC_S_DOWN)
-      {
-        pos_cmd -= 2.0f;
-        rc_reset = false;
-      }
-    }
-    rc_reset = rc->rc.s1 == RC_S_MIDDLE;
+    // if(rc_reset)
+    // {
+    //   if(rc->rc.s1 == RC_S_UP)
+    //   {
+    //     pos_cmd += 15.0f;
+    //     rc_reset = false;
+    //   }
+    //   else if(rc->rc.s1 == RC_S_DOWN)
+    //   {
+    //     pos_cmd -= 2.0f;
+    //     rc_reset = false;
+    //   }
+    // }
+    // rc_reset = rc->rc.s1 == RC_S_MIDDLE;
 
-
-    //=======================================================================
-    lift_changePos(-pos_cmd,-pos_cmd,-pos_cmd,-pos_cmd);
+    // if(lift_state != LIFT_INITING)
+    //   lift_changePos(pos_cmd,pos_cmd,pos_cmd,pos_cmd);
+    // //=======================================================================
 
     uint8_t i;
 
@@ -320,7 +321,7 @@ static THD_FUNCTION(lift_control, p)
 
       if(lift_state == LIFT_INITING)
       {
-        output_max[i] = 4000;
+        output_max[i] = 5000;
       }
       else
         output_max[i] =  OUTPUT_MAX;

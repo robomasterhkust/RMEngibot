@@ -202,10 +202,10 @@ static void drive_kinematics(const float strafe_vel, const float drive_vel, cons
 {
   float speed_sp[4];
 
-  speed_sp[FRONT_RIGHT] = -strafe_vel + drive_vel - heading_vel * HEADING_PSC;   // CAN ID: 0x201
-  speed_sp[BACK_RIGHT]  = strafe_vel + drive_vel - heading_vel * HEADING_PSC;   // CAN ID: 0x202
-  speed_sp[FRONT_LEFT]  =  -strafe_vel - drive_vel - heading_vel * HEADING_PSC;   // CAN ID: 0x203
-  speed_sp[BACK_LEFT]   =  strafe_vel - drive_vel - heading_vel * HEADING_PSC;   // CAN ID: 0x204
+  speed_sp[FRONT_RIGHT] = -(-strafe_vel + drive_vel - heading_vel * HEADING_PSC);   // CAN ID: 0x201
+  speed_sp[BACK_RIGHT]  = -(strafe_vel + drive_vel - heading_vel * HEADING_PSC);   // CAN ID: 0x202
+  speed_sp[FRONT_LEFT]  = -(-strafe_vel - drive_vel - heading_vel * HEADING_PSC);   // CAN ID: 0x203
+  speed_sp[BACK_LEFT]   =  -(strafe_vel - drive_vel - heading_vel * HEADING_PSC);   // CAN ID: 0x204
 
   uint8_t i;
   int16_t output[4];

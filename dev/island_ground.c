@@ -77,12 +77,12 @@ static THD_FUNCTION(Island_thread, p)
 
   lift_calibrate();
 
-  // do{
-  //   chThdSleepMilliseconds(1000);
-  // }while(gripper_getError());
-  // gripper_calibrate();
+  do{
+    chThdSleepMilliseconds(1000);
+  }while(gripper_getError());
+  gripper_calibrate();
 
-  gimbal_calibrate();
+  // gimbal_calibrate();
 
   systime_t roller_in_start;
 
@@ -123,15 +123,14 @@ static THD_FUNCTION(Island_thread, p)
       case STATE_TEST:
       DOG_RELAX();
       CLOSE_LID();
-        gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[4]); //swing back, open hand
+      gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[4]); //swing back, open hand
 
-        chassis_setSpeedLimit(1.0f);
-        chassis_setAcclLimit(100);
-        chassis_headingLockCmd(DISABLE);
-        chassis_killAutoDriver();
+      chassis_setSpeedLimit(1.0f);
+      chassis_setAcclLimit(100);
+      chassis_headingLockCmd(DISABLE);
+      chassis_killAutoDriver();
 
-        lift_changePos(40.0f  , 40.0f   ,
-          40.0f  , 40.0f  );
+        lift_changePos(pos_sp[6], pos_sp[6],pos_sp[6],pos_sp[6]);
 
         if(S2 == ASCEND_MODE && (s1_reset && island_ascend()))
         {
@@ -226,7 +225,7 @@ static THD_FUNCTION(Island_thread, p)
         rangeFinder_control(RANGEFINDER_INDEX_LEFT_DOGBALL,  ENABLE);
         rangeFinder_control(RANGEFINDER_INDEX_RIGHT_DOGBALL, ENABLE);
 
-        lift_changePos(  pos_sp[1] + roller_in  , pos_sp[1] + roller_in ,
+        lift_changePos(  pos_sp[1]  , pos_sp[1],
          pos_sp[2]  , pos_sp[2] );
 
         if(S2 == ASCEND_MODE &&(s1_reset && island_ascend()))
@@ -265,8 +264,8 @@ static THD_FUNCTION(Island_thread, p)
         case STATE_ROLLER_IN_LEFT:
         rangeFinder_control(RANGEFINDER_INDEX_LEFT_DOGBALL,  DISABLE);
 
-        lift_changePos( pos_sp[1] + roller_in , pos_sp[2]   ,
-         pos_sp[2] , pos_sp[2]  );
+        lift_changePos( pos_sp[2]  , pos_sp[1]   ,
+         pos_sp[1] , pos_sp[1]  );
 
         if(S2 == ASCEND_MODE &&
           (
@@ -288,8 +287,8 @@ static THD_FUNCTION(Island_thread, p)
         case STATE_ROLLER_IN_RIGHT:
         rangeFinder_control(RANGEFINDER_INDEX_RIGHT_DOGBALL, DISABLE);
 
-        lift_changePos(pos_sp[2]  ,  pos_sp[1] + roller_in,
-           pos_sp[2]   ,    pos_sp[2]   );
+        lift_changePos(pos_sp[1]  ,  pos_sp[2] ,
+         pos_sp[1]   ,    pos_sp[1]   );
 
         if(S2 == ASCEND_MODE &&
           (
@@ -326,8 +325,8 @@ static THD_FUNCTION(Island_thread, p)
           rangeFinder_control(RANGEFINDER_INDEX_RIGHT_BUM, ENABLE);
         }
 
-        lift_changePos(pos_sp[2]  , pos_sp[2]   ,
-          pos_sp[2]  , pos_sp[2]  );
+        lift_changePos(pos_sp[1]  , pos_sp[1],
+          pos_sp[1]  , pos_sp[1]  );
 
         if(
           (S2 == ASCEND_MODE && (s1_reset && island_ascend()))||
@@ -433,9 +432,9 @@ static THD_FUNCTION(Island_thread, p)
         case STATE_ISLAND_4:
         DOG_RELAX();
 
-        if(chVTGetSystemTimeX() > pour_ammo_time + MS2ST(1500))
+        if(chVTGetSystemTimeX() > pour_ammo_time + MS2ST(1000))
         {
-          gripper_changePos(gripper_pos_sp[1], gripper_pos_sp[4]); //strech out. close hand
+          gripper_changePos(gripper_pos_sp[0], gripper_pos_sp[4]); //strech out. open hand
           gripper_release_time = chVTGetSystemTimeX();
           island_robotSetState(STATE_ISLAND_5);
         }
@@ -480,7 +479,6 @@ static THD_FUNCTION(Island_thread, p)
         break;
         case STATE_HERO_INTERACT_3:
         POUR_AMMO();
-        hero_interact_time = chVTGetSystemTimeX();
         if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
         {
           CLOSE_LID();
@@ -489,8 +487,8 @@ static THD_FUNCTION(Island_thread, p)
         break;
         case STATE_RUSHDOWN_1:
         DOG_RELAX();
-        lift_changePos(  pos_sp[4]  , pos_sp[4],
-          pos_sp[2]  , pos_sp[2]   );
+        lift_changePos(  pos_sp[3]  , pos_sp[3],
+          pos_sp[6]  , pos_sp[6]   );
         gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[4]); //swing back, open hand
         chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_HIGH);
         chassis_setAcclLimit(100U);
@@ -511,7 +509,7 @@ static THD_FUNCTION(Island_thread, p)
         break;
         case STATE_RUSHDOWN_2:
         lift_changePos(   pos_sp[3]  , pos_sp[3] ,
-         pos_sp[2]  , pos_sp[2]  );
+         pos_sp[6]  , pos_sp[6]  );
 
         if(pIMU->euler_angle[Pitch] > threshold[2])
           count_onGround++;
@@ -543,13 +541,12 @@ static THD_FUNCTION(Island_thread, p)
   }
 
   const char namePos[] = "pos_sp";
-  const char subNamePos[] = "1 2 3 4 5 6 7";
-
+  const char subNamePos[] = "on_foot down up rush_down island_down island_up ground";
   const char nameTH[] = "island_th";
   const char subNameTH[] = "Up_Pitch Dn_Pitch1 Dn_Pitch2 Dn_Pitch3 Up_RF1 Up_RF2 Up_RF3";
 
   static const char PosName[] = "Gripper Pos";
-  static const char PosSubName[] = "ArmIni ArmOut ArmIn ArmUp Open Close";
+  static const char PosSubName[] = "ArmAway ArmOut ArmIn ArmUp Open Close";
 
   static const char PosInteractName[] = "Hero interact";
   static const char PosInteractSubName[] = "front back";
