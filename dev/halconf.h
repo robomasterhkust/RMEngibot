@@ -53,14 +53,14 @@
 //#define POWER1_ON()     (palSetPad(GPIOH, GPIOH_PIN2))
  
 //Sets of command for Pneumatics Output
-#define PN1_ON()        (palSetPad(GPIOD, GPIOD_PNEUMATICS1))
-#define PN2_ON()        (palSetPad(GPIOD, GPIOD_PNEUMATICS2))
+#define PN1_ON()        (palSetPad(GPIOH, GPIOH_PIN5))
+#define PN2_ON()        (palSetPad(GPIOH, GPIOH_PIN4))
 #define PN3_ON()        (palSetPad(GPIOH, GPIOH_PNEUMATICS3))
 #define PN4_ON()        (palSetPad(GPIOH, GPIOH_PNEUMATICS4))
 #define PN5_ON()        (palSetPad(GPIOH, GPIOH_PNEUMATICS5))
 #define PN6_ON()        (palSetPad(GPIOI, GPIOI_PNEUMATICS6))
-#define PN1_OFF()       (palClearPad(GPIOD, GPIOD_PNEUMATICS1))
-#define PN2_OFF()       (palClearPad(GPIOD, GPIOD_PNEUMATICS2))
+#define PN1_OFF()       (palClearPad(GPIOH, GPIOH_PIN5))
+#define PN2_OFF()       (palClearPad(GPIOH, GPIOH_PIN4))
 #define PN3_OFF()       (palClearPad(GPIOH, GPIOH_PNEUMATICS3))
 #define PN4_OFF()       (palClearPad(GPIOH, GPIOH_PNEUMATICS4))
 #define PN5_OFF()       (palClearPad(GPIOH, GPIOH_PNEUMATICS5))

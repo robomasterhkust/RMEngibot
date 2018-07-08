@@ -1186,8 +1186,8 @@
                                      PIN_PUPDR_FLOATING(GPIOH_PIN15))
 #define VAL_GPIOH_ODR               (PIN_ODR_HIGH(GPIOH_OSC_IN) |           \
                                      PIN_ODR_HIGH(GPIOH_OSC_OUT) |          \
-                                     PIN_ODR_HIGH(GPIOH_PIN2) |             \
-                                     PIN_ODR_LOW(GPIOH_PIN3) |             \
+                                     PIN_ODR_LOW(GPIOH_PIN2) |             \
+                                     PIN_ODR_HIGH(GPIOH_PIN3) |             \
                                      PIN_ODR_LOW(GPIOH_PIN4) |             \
                                      PIN_ODR_LOW(GPIOH_PIN5) |             \
                                      PIN_ODR_LOW(GPIOH_TIM12_CH1) |             \
