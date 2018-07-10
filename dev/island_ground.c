@@ -315,7 +315,7 @@ static THD_FUNCTION(Island_thread, p)
         if(lift_inPosition())
           chassis_autoCmd(CHASSIS_DRIVE, -150.0f);
         #endif
-
+        DOG_RELAX();
         chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_HIGH);
         chassis_setAcclLimit(ISLAND_SPEED_LIMIT_HIGH);
 
@@ -470,8 +470,8 @@ static THD_FUNCTION(Island_thread, p)
         }
         break;
         case STATE_HERO_INTERACT_2:
-        lift_changePos(hero_interact_pos_sp[1]  , hero_interact_pos_sp[1]   ,
-         hero_interact_pos_sp[0] ,hero_interact_pos_sp[0]  );
+        lift_changePos(hero_interact_pos_sp[0]  , hero_interact_pos_sp[0]   ,
+         hero_interact_pos_sp[1] ,hero_interact_pos_sp[1]  );
         if(lift_inPosition()){
           if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
             island_robotSetState(STATE_HERO_INTERACT_3);
@@ -487,8 +487,8 @@ static THD_FUNCTION(Island_thread, p)
         break;
         case STATE_RUSHDOWN_1:
         DOG_RELAX();
-        lift_changePos(  pos_sp[3]  , pos_sp[3],
-          pos_sp[6]  , pos_sp[6]   );
+        lift_changePos(  pos_sp[6]  , pos_sp[6],
+          pos_sp[3]  , pos_sp[3]   );
         gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[4]); //swing back, open hand
         chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_HIGH);
         chassis_setAcclLimit(100U);
@@ -508,8 +508,8 @@ static THD_FUNCTION(Island_thread, p)
 
         break;
         case STATE_RUSHDOWN_2:
-        lift_changePos(   pos_sp[3]  , pos_sp[3] ,
-         pos_sp[6]  , pos_sp[6]  );
+        lift_changePos(   pos_sp[6]  , pos_sp[6] ,
+         pos_sp[3]  , pos_sp[3]  );
 
         if(pIMU->euler_angle[Pitch] > threshold[2])
           count_onGround++;

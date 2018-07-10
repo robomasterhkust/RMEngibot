@@ -104,10 +104,10 @@ static void gripper_encoderUpdate(void)
 void gripper_changePos(const float pos_sp1, const float pos_sp2)
 {
 
-  if(offset[1] - pos_sp2 != motors[1].pos_sp)
+  if(offset[1] + pos_sp2 != motors[1].pos_sp)
   {
     in_position[1] = false;
-    motors[1].pos_sp = offset[1] - pos_sp2;
+    motors[1].pos_sp = offset[1] + pos_sp2;
   }
   
   while(offset[0] - pos_sp1 != motors[0].pos_sp){
@@ -269,8 +269,11 @@ void gripper_calibrate(void)
     {
       if(stall_count[i] < STALL_COUNT_MAX)
       {
-        motors[i].pos_sp += motor_step[i];
-        if(motors[i]._pos - prev_pos[i] < motor_step[i] * 0.2f)
+        if(i == 1 )
+          motors[i].pos_sp -= motor_step[i];
+        else
+          motors[i].pos_sp += motor_step[i];
+        if(ABS(motors[i]._pos - prev_pos[i]) < motor_step[i] * 0.2f)
           stall_count[i]++;
         else if(stall_count[i] > 10)
           stall_count[i] -= 10;

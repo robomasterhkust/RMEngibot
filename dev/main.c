@@ -126,13 +126,15 @@ int main(void) {
   can_processInit();
   system_error_init();
   PWM12_start();
-  PN1_ON();
+
 //  extiinit(); //*
   /* Init sequence 2: sensors, comm*/
+  
   rangeFinder_init();
   attitude_init();
   RC_init();
   judgeinit();
+
   while(!power_check())
   {
     system_setTempWarningFlag();
