@@ -28,6 +28,8 @@ static param_t gimbal_pos_sp[2];
 static param_t gimbal_pos_limit[2];
 static uint8_t gimbal_limit_status; //gimbal limit position status
 
+static gimbal_error_t gimbal_error;
+
 typedef enum{
   GIMBAL_AT_LOW_LIMIT = 1,
   GIMBAL_AT_UP_LIMIT = 2
@@ -55,9 +57,14 @@ motorPosStruct* gimbal_get(void)
   return &motors;
 }
 
-bool gimbal_getError(void)
+gimbal_error_t gimbal_getError(void)
 {
-  return gimbal_state == GIMBAL_ERROR;
+  return gimbal_error;
+}
+
+float* gimbal_getEulerAngle(void)
+{
+  return EulerAngle;
 }
 
 void gimbal_kill(void){
@@ -74,30 +81,30 @@ void gimbal_kill(void){
 
 static void gimbal_getAtti(float* EulerAngle)
 {
-  float  current_angle = motors._pos - gimbal_init_pos;
+  float  current_angle = -(motors._pos - gimbal_init_pos);
   //parameters for the quaternion
   float q_result[4];
   float q[4];
-  float Euler[3] = {0,-current_angle,0};
+  float Euler[3] = {0,current_angle,0};
 
   euler2quarternion(Euler,q);
-  quarternionXquarternion(q,pIMU->qIMU,q_result);
+  quarternionXquarternion(pIMU->qIMU,  q, q_result);
   quarternion2euler(q_result,EulerAngle);
 
-  if(current_angle > gimbal_pos_limit[1])
+  if(current_angle < -gimbal_pos_limit[0] || pIMU->euler_angle[Pitch] < -M_PI_2_F + 0.3f)
     gimbal_limit_status = GIMBAL_AT_UP_LIMIT;
-  else if(current_angle < -gimbal_pos_limit[0])
+  else if(current_angle > gimbal_pos_limit[1] || pIMU->euler_angle[Pitch] > M_PI_2_F - 0.3f)
     gimbal_limit_status = GIMBAL_AT_LOW_LIMIT;
-  else
+  else if(current_angle > -gimbal_pos_limit[0] + 0.05f && current_angle < gimbal_pos_limit[1] - 0.05f)
     gimbal_limit_status = 0;
 
 }
 
 static void gimbal_attiCmd(void)
 {
-  float rc_input = -  mapInput((float)rc->rc.channel3, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX,
+  float rc_input = -mapInput((float)rc->rc.channel3, RC_CH_VALUE_MIN, RC_CH_VALUE_MAX,
                               -GIMBAL_MAX_SPEED, GIMBAL_MAX_SPEED)
-               +  mapInput((float)rc->mouse.y, -25, 25, -GIMBAL_MAX_SPEED, GIMBAL_MAX_SPEED);
+               -  mapInput((float)rc->mouse.y, -25, 25, -GIMBAL_MAX_SPEED, GIMBAL_MAX_SPEED);
 
   rc_input *= cosf(pIMU->euler_angle[Roll]);
 
@@ -130,12 +137,13 @@ static void gimbal_encoderUpdate(void)
    if(motors._wait_count > GIMBAL_CONNECTION_ERROR_COUNT)
    {
      motors._wait_count = 1;
-     //gimbal_kill();
+     gimbal_error |= GIMBAL_NO_CONNECTION;
+     gimbal_kill();
    }
  }
 
- if((motors.pos_sp - motors._pos) < 0.05f &&
-  (motors.pos_sp - motors._pos) > -0.05f)
+ if((motors.pos_sp - motors._pos) < 0.01f &&
+  (motors.pos_sp - motors._pos) > -0.01f)
    motors.in_position++;
  else
    motors.in_position = 0;
@@ -187,7 +195,7 @@ static inline float gimbal_controlAttitude (pid_controller_t *const atti,
 
 //static int16_t gimbal_controlspeed()
 #define GIMBAL_UPDATE_PERIOD_US  1000000/GIMBAL_CONTROL_FREQ
-static THD_WORKING_AREA(gimbal_control_wa, 512);
+static THD_WORKING_AREA(gimbal_control_wa, 1024);
 static THD_FUNCTION(gimbal_control, p)
 {
   (void)p;
@@ -252,8 +260,7 @@ static THD_FUNCTION(gimbal_control, p)
         gimbal_getAtti(EulerAngle);
         gimbal_attiCmd(); //RC attitude cmd input
 
-        float motor_vel_input = gimbal_encoders->raw_speed * 2 * M_PI /(GIMBAL_GEAR_RATIO * 60); // rpm to rad/s
-        float angleVel = pIMU->gyroData[Y] - motors._speed;
+        float angleVel = pIMU->gyroData[Y] + motors._speed;
                                         // ^
     //TODO: Check the sign here -----------|
     //Turning down --> positive
@@ -311,15 +318,15 @@ void gimbal_calibrate(void){
   float prev_pos;
 
   uint8_t stall_count = 0;
-  const float motor_step = 0.02f;
+  const float motor_step = 0.04f;
 
   while(!init_state)
   {
     if(stall_count < STALL_COUNT_MAX)
     {
     	motors.pos_sp += motor_step;
-    	if(motors._pos - prev_pos < motor_step * 0.5 ||
-         motors._pos - prev_pos > -motor_step * 0.5)
+    	if(motors._pos - prev_pos < motor_step * 0.2 ||
+         motors._pos - prev_pos > -motor_step * 0.2)
     		stall_count++;
     	else if(stall_count > 10)
     		stall_count -= 10;
@@ -334,14 +341,13 @@ void gimbal_calibrate(void){
     	offset = motors._pos;
     }
 
-    chThdSleepMilliseconds(10);
+    chThdSleepMilliseconds(30);
   }
 
   gimbal_changePos(gimbal_pos_sp[0]);
 
   while(!in_position)
     chThdSleepMilliseconds(100); //Wait for gimbal to reach set position
-
   chSysLock();
 
   gimbal_init_pos = motors._pos;
@@ -358,8 +364,67 @@ static const char GimbalLimit[] = "Gimbal Limit";
 static const char GimbalAtti[] = "GimbalAtti";
 
 static const char GimbalPosName[] = "gimbal Pos";
-static const char GimbalPosSubName[] = "down up";
+static const char GimbalPosSubName[] = "up down";
 
+static THD_WORKING_AREA(gimbal_test_wa, 512);
+static THD_FUNCTION(gimbal_test, p)
+{
+  (void)p;
+  chRegSetThreadName("gimbal test");
+
+  float output;
+  float output_max;
+
+  gimbal_state = GIMBAL_INITING; //Use controller to toggle gimbal state to screen
+
+  uint32_t tick = chVTGetSystemTimeX();
+  while(!chThdShouldTerminateX())
+  {
+    tick += US2ST(GIMBAL_UPDATE_PERIOD_US);
+    if(tick > chVTGetSystemTimeX())
+      chThdSleepUntil(tick);
+    else
+    {
+      system_setTempWarningFlag();
+      tick = chVTGetSystemTimeX();
+    }
+
+    //we can use this pos_cmd to control the gimabl
+    gimbal_encoderUpdate();
+    gimbal_getAtti(EulerAngle);
+
+    //Use controller to toggle gimbal state to screen
+    if(rc->rc.channel3 < RC_CH_VALUE_MIN + 10)
+    {
+      gimbal_state = GIMBAL_SCREEN;
+      gimbal_changePos(gimbal_pos_sp[1]);
+    }
+    else if(rc->rc.channel3 > RC_CH_VALUE_MAX - 10)
+    {
+      gimbal_state = GIMBAL_SCREEN;
+      gimbal_changePos(gimbal_pos_sp[0]);
+    }
+
+    switch(gimbal_state)
+    {
+      case GIMBAL_INITING:
+        output_max = 10000;
+
+        output = gimbal_controlPos(&motors, &gimbal_pos, output_max);
+        can_motorSetCurrent(GIMBAL_CAN, GIMBAL_CAN_EID,
+          output, 0, 0, 0);
+        break;
+      case GIMBAL_SCREEN:
+      case GIMBAL_SCREEN_LOCK:
+        output_max = GIMBAL_MAX_OUTPUT;
+
+        output = gimbal_controlPos(&motors, &gimbal_pos, output_max);
+        can_motorSetCurrent(GIMBAL_CAN, GIMBAL_CAN_EID,
+          output, 0, 0, 0);
+        break;
+    }
+  }
+}
 
 #define GIMBAL_ERROR_INT_MAX  4000
 void gimbal_init(void)
@@ -380,8 +445,10 @@ void gimbal_init(void)
   params_set(&gimbal_pos_limit,  2, 2, GimbalLimit,  GimbalPosSubName , PARAM_PUBLIC);
   params_set(&gimbal_pos, 24, 3, GimbalPos, subname_PID,PARAM_PUBLIC);
   params_set(gimbal_pos_sp, 25, 2, GimbalPosName, GimbalPosSubName , PARAM_PUBLIC);
-  gimbal_state = GIMBAL_INITING;
 
+  chThdSleepSeconds(3);
+
+  gimbal_state = GIMBAL_INITING;
   gimbal_thd = chThdCreateStatic(gimbal_control_wa, sizeof(gimbal_control_wa),
     NORMALPRIO, gimbal_control, NULL);
 }

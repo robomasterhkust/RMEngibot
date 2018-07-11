@@ -82,13 +82,12 @@ static THD_FUNCTION(Island_thread, p)
   }while(gripper_getError());
   gripper_calibrate();
 
-  // gimbal_calibrate();
+  gimbal_calibrate();
 
   systime_t roller_in_start;
 
   uint8_t S1,S2;
   uint32_t tick = chVTGetSystemTimeX();
-  gimbal_ToStable();
   while(true)
   {
     tick += MS2ST(ISLAND_UPDATE_PERIOD_MS);
@@ -278,7 +277,7 @@ static THD_FUNCTION(Island_thread, p)
           island_state++;
         }
         else if(
-         (s1_reset && island_decend()) 
+         (s1_reset && island_decend())
          ||pIMU->euler_angle[Pitch] > 0.2f
          )
           island_robotSetState(STATE_ROLLER_IN_2);

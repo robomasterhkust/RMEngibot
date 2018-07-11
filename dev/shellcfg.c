@@ -107,9 +107,22 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
 
   chassisStruct* chassis = chassis_get();
   motorPosStruct* gimbal = gimbal_get();
+  motorPosStruct* gripper = gripper_get();
   ChassisEncoder_canStruct* gimbal_encoders = can_getExtraMotor() + 6;
+  float* euler = gimbal_getEulerAngle();
 
   chprintf(chp, "VEL: %f\r\n", gimbal->_speed);
+
+  chprintf(chp, "accelX: %f\r\n", pIMU->accelData[X]);
+  chprintf(chp, "accelY: %f\r\n", pIMU->accelData[Y]);
+  chprintf(chp, "accelZ: %f\r\n", pIMU->accelData[Z]);
+
+  chprintf(chp, "ROLL : %f\r\n", euler[Roll] * 180 / M_PI);
+  chprintf(chp, "PITCH: %f\r\n", euler[Pitch] * 180 / M_PI);
+  chprintf(chp, "YAW  : %f\r\n", euler[Yaw] * 180 / M_PI);
+
+  chprintf(chp, "Gripper0: %f\r\n", gripper[0]._pos);
+  chprintf(chp, "Gripper1: %f\r\n", gripper[1]._pos);
 }
 
 void cmd_test_RF(BaseSequentialStream * chp, int argc, char *argv[])
@@ -153,7 +166,7 @@ void cmd_error(BaseSequentialStream * chp, int argc, char *argv[])
     chprintf(chp,"LIFT CONNECTION ERROR: %X\r\n", error);
 
   error = gimbal_getError();
-  if(error)
+  if(error & GIMBAL_NO_CONNECTION)
     chprintf(chp,"GIMBAL CONNECTION ERROR\r\n");
 
   error = gripper_getError();
@@ -257,7 +270,7 @@ void cmd_gyro(BaseSequentialStream * chp, int argc, char *argv[])
 void cmd_lift_check(BaseSequentialStream * chp, int argc, char *argv[]){
   (void) argc,argv;
   motorPosStruct* lifts = lift_get();
-  
+
   chprintf(chp,"lift1 :%f\r\n", lifts[0].pos_sp);
   chprintf(chp,"lift2 :%f\r\n", lifts[1].pos_sp);
   chprintf(chp,"lift3 :%f\r\n", lifts[2].pos_sp);

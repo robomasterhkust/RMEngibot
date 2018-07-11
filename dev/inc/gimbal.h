@@ -26,8 +26,14 @@ typedef enum {
   GIMBAL_ERROR  		    = -1
 }gimbal_state_t;
 
+typedef enum {
+  GIMBAL_NO_CONNECTION = 1,
+  GIMBAL_LOSE_FRAME = 32
+}gimbal_error_t;
+
 motorPosStruct* gimbal_get(void);
-bool gimbal_getError(void);
+gimbal_error_t gimbal_getError(void);
+float* gimbal_getEulerAngle(void);
 void gimbal_kill(void);
 
 void gimbal_calibrate(void);
