@@ -45,42 +45,39 @@ static THD_FUNCTION(Attitude_thread, p)
   static const IMUConfigStruct imu1_conf =
     {&SPID5, MPU6500_ACCEL_SCALE_8G, MPU6500_GYRO_SCALE_1000,
       MPU6500_AXIS_REV_X | MPU6500_AXIS_REV_Y };
+
   imuInit(pIMU, &imu1_conf);
+  tempControllerInit();
   imuGetData(pIMU);
 
-  if(pIMU->temperature > 0.0f)
-    tempControllerInit();
-  else
+  if(pIMU->temperature <= 0.0f)
   {
     system_setErrorFlag();
     pIMU->errorCode |= IMU_TEMP_ERROR;
   }
 
-  while(pIMU->temperature < 60.0f)
-  {
-    imuGetData(pIMU);
-    system_setTempWarningFlag();
-    chThdSleepMilliseconds(50);
-  }
-
-  pIMU->state = IMU_STATE_READY;
   attitude_imu_init(pIMU);
 
-  uint32_t tick = chVTGetSystemTimeX();
-
+  systime_t tick = chVTGetSystemTimeX();
   while(true)
   {
     tick += US2ST(MPU6500_UPDATE_PERIOD_US);
+
     if(chVTGetSystemTimeX() < tick)
       chThdSleepUntil(tick);
     else
     {
       tick = chVTGetSystemTimeX();
-      //system_setTempWarningFlag();
+      system_setTempWarningFlag();
       pIMU->errorCode |= IMU_LOSE_FRAME;
     }
 
     imuGetData(pIMU);
+    if(pIMU->state == IMU_STATE_HEATING && pIMU->temperature > 58.0f)
+      pIMU->state = IMU_STATE_READY;
+    else
+      system_setTempWarningFlag();
+
     attitude_update(pIMU);
 
     if(pIMU->accelerometer_not_calibrated || pIMU->gyroscope_not_calibrated)
@@ -129,7 +126,7 @@ int main(void) {
 
 //  extiinit(); //*
   /* Init sequence 2: sensors, comm*/
-  
+
   rangeFinder_init();
   attitude_init();
   RC_init();
@@ -142,7 +139,7 @@ int main(void) {
   }
 
   /* Init sequence 3: actuators, display*/
-  //gimbal_init();
+  gimbal_init();
   chassis_init();
   lift_init();
   gripper_init();

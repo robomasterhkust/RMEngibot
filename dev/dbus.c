@@ -226,7 +226,11 @@ static THD_FUNCTION(uart_dbus_thread, p)
 
         #ifdef RC_SAFE_LOCK
           if(rc_state != RC_UNLOCKED)
-            RC_RCreset();
+          {
+            RC_Ctl.rc.channel0 = 1024;
+            RC_Ctl.rc.channel1 = 1024;
+            RC_Ctl.rc.channel2 = 1024;
+          }
           else if(chVTGetSystemTimeX() > update_time + S2ST(RC_LOCK_TIME_S))
             rc_state = RC_LOCKED;
         #endif

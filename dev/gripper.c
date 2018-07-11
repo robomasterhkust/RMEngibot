@@ -109,7 +109,7 @@ void gripper_changePos(const float pos_sp1, const float pos_sp2)
     in_position[1] = false;
     motors[1].pos_sp = offset[1] + pos_sp2;
   }
-  
+
   while(offset[0] - pos_sp1 != motors[0].pos_sp){
     in_position[0] = false;
 
@@ -152,7 +152,7 @@ static THD_FUNCTION(gripper_control, p)
   (void)p;
   chRegSetThreadName("gripper controller");
 
-  
+
   float output[2];
   float output_max[2];
   uint32_t tick = chVTGetSystemTimeX();
@@ -165,8 +165,6 @@ static THD_FUNCTION(gripper_control, p)
     {
       tick = chVTGetSystemTimeX();
     }
-
-
 
     gripper_encoderUpdate();
 
@@ -239,7 +237,7 @@ static THD_FUNCTION(gripper_control, p)
   }
 }
 
-#define STALL_COUNT_MAX 100U
+#define STALL_COUNT_MAX 50U
 void gripper_calibrate(void)
 {
   //To initialize the lift wheel, a calibration is needed
@@ -252,7 +250,7 @@ void gripper_calibrate(void)
   uint8_t init_count = 0;
   uint8_t stall_count[GRIPPER_MOTOR_NUM] = {0, 0};
 
-  const float motor_step[GRIPPER_MOTOR_NUM] = {0.006f, 0.06f};
+  const float motor_step[GRIPPER_MOTOR_NUM] = {0.006f, -0.12f};
   BUZZER(500);
   chThdSleepMilliseconds(500);
   BUZZER(0);
@@ -265,15 +263,13 @@ void gripper_calibrate(void)
   {
     uint8_t i;
     init_count = 0;  //finish initialization only if all motor calibration finishes
-    for (i = 0; i < GRIPPER_MOTOR_NUM; ++i)
+    for (i = 0; i < GRIPPER_MOTOR_NUM; i++)
     {
       if(stall_count[i] < STALL_COUNT_MAX)
       {
-        if(i == 1 )
-          motors[i].pos_sp -= motor_step[i];
-        else
-          motors[i].pos_sp += motor_step[i];
-        if(ABS(motors[i]._pos - prev_pos[i]) < motor_step[i] * 0.2f)
+        motors[i].pos_sp += motor_step[i];
+
+        if(ABS(motors[i]._pos - prev_pos[i]) < ABS(motor_step[i] * 0.2f))
           stall_count[i]++;
         else if(stall_count[i] > 10)
           stall_count[i] -= 10;
@@ -293,11 +289,10 @@ void gripper_calibrate(void)
 
     chThdSleepMilliseconds(6);
   }
-  motors[1].pos_sp = offset[1] - 0.5f;
+
+  motors[1].pos_sp = offset[1] + 2.0f;
   motors[0].pos_sp = offset[0] - 0.2f;
   gripper_state = GRIPPER_RUNNING;
-
-  
 }
 
 static const ArmName = "Gripper Arm";
@@ -324,7 +319,7 @@ void gripper_init(void)
   }
   params_set(&controllers[0], 20,3,ArmName, subname_PID,PARAM_PUBLIC);
   params_set(&controllers[1], 21,3,HandName,subname_PID,PARAM_PUBLIC);
-  //testing 
+  //testing
   gripper_state = GRIPPER_INITING;
 
   chThdCreateStatic(gripper_control_wa, sizeof(gripper_control_wa),
