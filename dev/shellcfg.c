@@ -205,7 +205,6 @@ void cmd_data(BaseSequentialStream * chp, int argc, char *argv[])
 void cmd_calibrate(BaseSequentialStream * chp, int argc, char *argv[])
 {
   PIMUStruct pIMU = imu_get();
-  PGyroStruct pGyro = gyro_get();
   if(argc)
   {
     if(!strcmp(argv[0], "accl"))
@@ -221,18 +220,6 @@ void cmd_calibrate(BaseSequentialStream * chp, int argc, char *argv[])
       chThdSleepMilliseconds(10);
       calibrate_gyroscope(pIMU);
       chThdResume(&(pIMU->imu_Thd), MSG_OK);
-    }
-    else if(!strcmp(argv[0], "adi"))
-    {
-      pGyro->adis_gyroscope_not_calibrated = true;
-      chThdSleepMilliseconds(10);
-      if(argc && !strcmp(argv[1],"fast"))
-        gyro_cal(pGyro,false); //fast calibration ~30s
-      else if(argc && strcmp(argv[1],"full"))
-        chprintf(chp,"Invalid parameter!\r\n");
-      else
-        gyro_cal(pGyro,true); //full calibration ~5min
-      chThdResume(&(pGyro->adis_Thd), MSG_OK);
     }
     param_save_flash();
   }
@@ -261,10 +248,10 @@ void cmd_gyro(BaseSequentialStream * chp, int argc, char *argv[])
 {
       (void) argc,argv;
 
-      PGyroStruct _pGyro = gyro_get();
-      chprintf(chp,"Offset: %f\n", _pGyro->offset);
-      chprintf(chp,"Angle_vel: %f\n", _pGyro->angle_vel);
-      chprintf(chp,"Angle: %f\n", _pGyro->angle);
+      // PGyroStruct _pGyro = gyro_get();
+      // chprintf(chp,"Offset: %f\n", _pGyro->offset);
+      // chprintf(chp,"Angle_vel: %f\n", _pGyro->angle_vel);
+      // chprintf(chp,"Angle: %f\n", _pGyro->angle);
 }
 
 void cmd_lift_check(BaseSequentialStream * chp, int argc, char *argv[]){

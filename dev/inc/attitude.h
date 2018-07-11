@@ -2,7 +2,6 @@
 #define _ATTITUDE_H_
 
 #include "mpu6500.h"
-#include "adis16265.h"
 
 #define ATT_W_ACCEL     0.3f
 #define ATT_W_GYRO      0.1f

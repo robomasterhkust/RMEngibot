@@ -10,7 +10,6 @@
 #include "math_misc.h"
 
 #include "mpu6500.h"
-#include "adis16265.h"
 #include "usbcfg.h"
 #include "calibrate_sensor.h"
 //#include "flash.h"
@@ -412,62 +411,62 @@ void calibrate_gyroscope(PIMUStruct pIMU)
 }
 
 
-uint8_t gyro_cal(PGyroStruct pGyro, const uint8_t full_cal)
-{
-  float gyro_zero = 0.0f;
-  uint16_t i = 0;
+// uint8_t gyro_cal(PGyroStruct pGyro, const uint8_t full_cal)
+// {
+//   float gyro_zero = 0.0f;
+//   uint16_t i = 0;
 
-	if (pGyro->state == NOT_INITED)
-	{
-    chprintf(chp,"Gyro not inited!\r\n");
-    return -1;
-  }
+// 	if (pGyro->state == NOT_INITED)
+// 	{
+//     chprintf(chp,"Gyro not inited!\r\n");
+//     return -1;
+//   }
 
-  int32_t sample_num;
-  if(full_cal)
-    sample_num = 50000;
-  else
-    sample_num = 1000;
+//   int32_t sample_num;
+//   if(full_cal)
+//     sample_num = 50000;
+//   else
+//     sample_num = 1000;
 
-  pGyro->state = CALIBRATING;
-  chprintf(chp, "reading Gyro...\r\n ");
-  chprintf(chp, "                    ]\r[");
+//   pGyro->state = CALIBRATING;
+//   chprintf(chp, "reading Gyro...\r\n ");
+//   chprintf(chp, "                    ]\r[");
 
-  uint16_t count_samplenum_20 = 0;
-  uint16_t sample_num_mod_20 = sample_num/20;
+//   uint16_t count_samplenum_20 = 0;
+//   uint16_t sample_num_mod_20 = sample_num/20;
 
-  for (i = 0; i < sample_num; i++)
-  {
-      gyro_zero += gyro_get_raw_vel(pGyro);
+//   for (i = 0; i < sample_num; i++)
+//   {
+//       gyro_zero += gyro_get_raw_vel(pGyro);
 
-      if(i > count_samplenum_20)
-      {
-        chprintf(chp,"=");
-        count_samplenum_20 += sample_num_mod_20;
-      }
+//       if(i > count_samplenum_20)
+//       {
+//         chprintf(chp,"=");
+//         count_samplenum_20 += sample_num_mod_20;
+//       }
 
-			chThdSleepMilliseconds(5);
-  }
+// 			chThdSleepMilliseconds(5);
+//   }
 
-  gyro_zero *= pGyro->psc;
-  gyro_zero /= -sample_num;
-  gyro_zero -= pGyro->offset;
+//   gyro_zero *= pGyro->psc;
+//   gyro_zero /= -sample_num;
+//   gyro_zero -= pGyro->offset;
 
-  if(!full_cal && fabsf(gyro_zero) > 0.1f)
-  {
-    chprintf(chp,"\rCalibration failed! please perform a full re-calibration\r\n");
-    return -1;
-  }
+//   if(!full_cal && fabsf(gyro_zero) > 0.1f)
+//   {
+//     chprintf(chp,"\rCalibration failed! please perform a full re-calibration\r\n");
+//     return -1;
+//   }
 
-  chprintf(chp,"\r\n");
-  chprintf(chp,"Calibration complete\r\n");
-  pGyro->adis_gyroscope_not_calibrated = false;
-  pGyro->offset += gyro_zero;
-  chprintf(chp,"gyro_offset: %f\r\n",  pGyro->offset ); //* 180.0f/M_PI
+//   chprintf(chp,"\r\n");
+//   chprintf(chp,"Calibration complete\r\n");
+//   pGyro->adis_gyroscope_not_calibrated = false;
+//   pGyro->offset += gyro_zero;
+//   chprintf(chp,"gyro_offset: %f\r\n",  pGyro->offset ); //* 180.0f/M_PI
 
-	pGyro->state = INITED;
-  return 0;
-}
+// 	pGyro->state = INITED;
+//   return 0;
+// }
 /*
 void cmd_calibrate_gyro(BaseSequentialStream * chp, int argc, char *argv[])
 {

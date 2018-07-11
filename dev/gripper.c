@@ -6,7 +6,8 @@
 #include <math.h>
 #include "dbus.h"
 #include "system_error.h"
-
+#include "params.h"
+#include "math_misc.h"
 static ChassisEncoder_canStruct* gripper_encoders;
 static volatile motorPosStruct motors[GRIPPER_MOTOR_NUM];
 static float offset[GRIPPER_MOTOR_NUM];

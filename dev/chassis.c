@@ -15,11 +15,12 @@
 
 static volatile chassisStruct chassis;
 pi_controller_t motor_vel_controllers[CHASSIS_MOTOR_NUM];
+pid_controller_t motor_pos_controllers[CHASSIS_MOTOR_NUM];
 pid_controller_t heading_controller;
 lpfilterStruct lp_speed[CHASSIS_MOTOR_NUM];
 static RC_Ctl_t* pRC;
 static PIMUStruct pIMU;
-
+static int still_count = 0 ;
 //RC input of chassis controller
 static float   strafe_rc = 0.0f, drive_rc = 0.0f, heading_rc = 0.0f;
 static int8_t  rc_reversed       = 1; //-1: reverse, 0: kill, 1: no reverse
@@ -160,8 +161,15 @@ static void chassis_encoderUpdate(void)
       //Check validiaty of can connection
       chassis._encoders[i].updated = false;
 
-      //float pos_input = chassis._encoders[i].raw_angle*CHASSIS_ANGLE_PSC;
+      float pos_input = chassis._encoders[i].raw_angle*CHASSIS_ANGLE_PSC;
       float speed_input = chassis._encoders[i].raw_speed*CHASSIS_SPEED_PSC;
+      chassis.pos_motors[i].rev = chassis._encoders[i].round_count;
+
+      chassis.pos_motors[i]._prev = pos_input;
+      pos_input += chassis.pos_motors[i].rev * 2 * M_PI;
+      chassis.pos_motors[i]._pos = pos_input / CHASSIS_GEAR_RATIO;
+
+
       chassis._motors[i]._speed = lpfilter_apply(&lp_speed[i], speed_input);
       chassis._motors[i]._wait_count = 1;
     }
@@ -192,6 +200,20 @@ static int16_t chassis_controlSpeed(const motorStruct* motor, pi_controller_t* c
   return (int16_t)(boundOutput(output,OUTPUT_MAX));
 }
 
+
+static int16_t chassis_controlPos
+(const motorPosStruct* const motor, pid_controller_t* const controller)
+{
+  float error = motor->pos_sp - motor->_pos;
+  controller->error_int += error * controller->ki;
+  controller->error_int = boundOutput(controller->error_int, controller->error_int_max);
+  float output =
+  error*controller->kp + controller->error_int - motor->_speed * controller->kd;
+
+  return (int16_t)(boundOutput(output,OUTPUT_MAX));
+}
+
+
 #define HEADING_PSC VEL_MAX/HEADING_MAX
 
 #ifdef CHASSIS_POWER_LIMIT
@@ -201,7 +223,10 @@ static int16_t chassis_controlSpeed(const motorStruct* motor, pi_controller_t* c
 static void drive_kinematics(const float strafe_vel, const float drive_vel, const float heading_vel)
 {
   float speed_sp[4];
-
+  if(strafe_vel == 0 && drive_vel == 0 && heading_vel == 0 )
+    still_count++ ;
+  else
+    still_count = 0 ;
   speed_sp[FRONT_RIGHT] = -(-strafe_vel + drive_vel - heading_vel * HEADING_PSC);   // CAN ID: 0x201
   speed_sp[BACK_RIGHT]  = -(strafe_vel + drive_vel - heading_vel * HEADING_PSC);   // CAN ID: 0x202
   speed_sp[FRONT_LEFT]  = -(-strafe_vel - drive_vel - heading_vel * HEADING_PSC);   // CAN ID: 0x203
@@ -232,12 +257,24 @@ static void drive_kinematics(const float strafe_vel, const float drive_vel, cons
   for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
     chassis._motors[i].speed_sp = speed_scaler * speed_sp[i];
 
-  for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
-  {
-    output[i] = chassis_controlSpeed(&chassis._motors[i], &motor_vel_controllers[i]);
+  if(still_count < 300){
+    for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
+    {
+      output[i] = chassis_controlSpeed(&chassis._motors[i], &motor_vel_controllers[i]);
     #ifdef CHASSIS_POWER_LIMIT
       total_output += ABS(output[i]);
     #endif
+    }
+  }
+  else{
+    for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
+    {
+      output[i] = chassis_controlPos(&chassis._motors[i], &motor_pos_controllers[i]);
+    #ifdef CHASSIS_POWER_LIMIT
+      total_output += ABS(output[i]);
+    #endif
+    }
+
   }
 
   if(chassis.state & CHASSIS_SUSPEND_R)
@@ -314,6 +351,7 @@ void chassis_autoCmd(const uint8_t dir, const float cmd)
         chassis.state |= CHASSIS_AUTO_HEADING;
       }
       break;
+
   }
   chSysUnlock();
 }
@@ -443,6 +481,13 @@ static const FRvelName = "FR_vel";
 static const FLvelName = "FL_vel";
 static const BLvelName = "BL_vel";
 static const BRvelName = "BR_vel";
+
+
+static const FRposName = "FR_pos";
+static const FLposName = "FL_pos";
+static const BLposName = "BL_pos";
+static const BRposName = "BR_pos";
+
 static const HeadingName = "Heading";
 
 #define MOTOR_VEL_INT_MAX 12000U
@@ -457,6 +502,11 @@ void chassis_init(void)
   params_set(&motor_vel_controllers[FRONT_RIGHT], 10,2,FRvelName,subname_PI,PARAM_PUBLIC);
   params_set(&motor_vel_controllers[BACK_LEFT], 11,2,BLvelName,subname_PI,PARAM_PUBLIC);
   params_set(&motor_vel_controllers[BACK_RIGHT], 12,2,BRvelName,subname_PI,PARAM_PUBLIC);
+
+  params_set(&motor_pos_controllers[FRONT_LEFT], 5,2,FLposName,subname_PID,PARAM_PUBLIC);
+  params_set(&motor_pos_controllers[FRONT_RIGHT], 6,2,FRposName,subname_PID,PARAM_PUBLIC);
+  params_set(&motor_pos_controllers[BACK_LEFT], 7,2,BLposName,subname_PID,PARAM_PUBLIC);
+  params_set(&motor_pos_controllers[BACK_RIGHT], 8,2,BRposName,subname_PID,PARAM_PUBLIC);
 
   params_set(&heading_controller, 17,3,HeadingName,subname_PID,PARAM_PUBLIC);
 
