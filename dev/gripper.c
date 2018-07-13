@@ -113,20 +113,20 @@ void gripper_changePos(const float pos_sp1, const float pos_sp2)
   }
 
   robot_state_t state=  island_getRobotState();
-  if(state == STATE_ISLAND_2|| state == STATE_ISLAND_4){
+  if(state == STATE_ISLAND_2|| state == STATE_ISLAND_4 ||state == STATE_ISLAND_5){
      while(offset[0] - pos_sp1 != motors[0].pos_sp){
       in_position[0] = false;
 
-      if(ABS(offset[0] - pos_sp1 - motors[0].pos_sp) < 0.008){
+      if(ABS(offset[0] - pos_sp1 - motors[0].pos_sp) < 0.006){
         in_position[0] = false;
         motors[0].pos_sp = offset[0] - pos_sp1;
       }
       else{
         if(offset[0] - pos_sp1 - motors[0].pos_sp > 0 ){
-          motors[0].pos_sp += 0.008;
+          motors[0].pos_sp += 0.006;
         }
         else{
-          motors[0].pos_sp -= 0.008;
+          motors[0].pos_sp -= 0.006;
         }
       }
       chThdSleepMilliseconds(2);
