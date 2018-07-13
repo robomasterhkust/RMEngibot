@@ -177,7 +177,7 @@ void cmd_error(BaseSequentialStream * chp, int argc, char *argv[])
 
   chprintf(chp,"Chassis State: %X\r\n",  chassis->state);
   chprintf(chp,"island State: %X\r\n",   island_getRobotState());
-
+  chprintf(chp,"island:%X\r\n", island_getState());
   system_clearWarningFlag();
 }
 

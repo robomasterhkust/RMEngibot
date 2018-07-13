@@ -485,6 +485,7 @@ static THD_FUNCTION(Island_thread, p)
         break;
         case STATE_RUSHDOWN_1:
         DOG_RELAX();
+        
         lift_changePos(  pos_sp[6]  , pos_sp[6],
           pos_sp[3]  , pos_sp[3]   );
         gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[4]); //swing back, open hand
@@ -506,21 +507,24 @@ static THD_FUNCTION(Island_thread, p)
 
         break;
         case STATE_RUSHDOWN_2:
-        lift_changePos(   pos_sp[6]  , pos_sp[6] ,
-         pos_sp[3]  , pos_sp[3]  );
-
+        lift_set_state(LIFT_SUSPEND_B);
         if(pIMU->euler_angle[Pitch] > threshold[2])
           count_onGround++;
 
-        if(count_onGround >= 2 && threshold_count(pIMU->euler_angle[Pitch] > threshold[3], 3, &count))
+        if(count_onGround >= 2 && threshold_count(pIMU->euler_angle[Pitch] < threshold[3], 3, &count))
         {
           if(island_state != STATE_STAIR_0)
             island_state--;
 
-          if(island_state == STATE_STAIR_1)
+          if(island_state == STATE_STAIR_1){
             island_robotSetState(STATE_RUSHDOWN_1);
-          else if(island_state == STATE_STAIR_0)
+            lift_set_state(LIFT_RUNNING);
+          }
+          
+          else if(island_state == STATE_STAIR_0){
             island_robotSetState(STATE_GROUND);
+            lift_set_state(LIFT_RUNNING);
+          }
         }
         else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
         {
@@ -528,6 +532,7 @@ static THD_FUNCTION(Island_thread, p)
             island_state--;
 
           island_robotSetState(STATE_GROUND);
+          lift_set_state(LIFT_RUNNING);
         }
 
         break;

@@ -20,8 +20,11 @@ static float offset[4];
 static lpfilterStruct lp_speed[4];
 static float output[4];
 static pid_controller_t controllers[4];
-
 static float pos_cmd = 0;
+
+void lift_set_state(lift_state_t l){
+  lift_state = l;
+}
 
 motorPosStruct* lift_get(void)
 {
@@ -239,7 +242,7 @@ void lift_calibrate(void)
   lift_state = LIFT_RUNNING;
 }
 
-#define OUTPUT_MAX  16383
+#define OUTPUT_MAX  12000
 
 #define ONFOOT_TRANSITION_TIME_MS   100
 #define ONFOOT_TRANSITION_TH        20.0f
@@ -327,6 +330,13 @@ static THD_FUNCTION(lift_control, p)
         output_max[i] =  OUTPUT_MAX;
       output[i] = lift_controlPos(&motors[i], &controllers[i],output_max[i]);
     }
+    if(lift_state == LIFT_SUSPEND_B && offset[BACK_RIGHT] + 5 < motors[BACK_RIGHT]._pos){
+      output[BACK_RIGHT] = 0 ;
+    }
+    if(lift_state == LIFT_SUSPEND_B && offset[BACK_LEFT] + 5< motors[BACK_LEFT]._pos){
+      output[BACK_LEFT] = 0 ;
+    }
+
     can_motorSetCurrent(LIFT_CAN, LIFT_CAN_EID,
      output[FRONT_RIGHT], output[FRONT_LEFT], output[BACK_LEFT],output[BACK_RIGHT] );
   }

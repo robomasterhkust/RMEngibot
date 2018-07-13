@@ -2,7 +2,6 @@
 #define _LIFT_H_
 
 #include "chassis.h"
-
 #define LIFT_CAN   &CAND2
 #define LIFT_CAN_EID  0x1FF
 #define LIFT_GEAR_RATIO 19U
@@ -15,6 +14,7 @@ typedef enum {
   LIFT_UNINIT = 0,
   LIFT_INITING,
   LIFT_RUNNING,
+  LIFT_SUSPEND_B,
   LIFT_ERROR
 } lift_state_t;
 
@@ -35,5 +35,6 @@ bool lift_inPosition(void);
 void lift_init(void);
 void lift_kill(void);
 void lift_calibrate(void);
+void lift_set_state(lift_state_t l);
 
 #endif
