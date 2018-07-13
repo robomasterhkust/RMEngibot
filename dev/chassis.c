@@ -257,7 +257,7 @@ static void drive_kinematics(const float strafe_vel, const float drive_vel, cons
   for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
     chassis._motors[i].speed_sp = speed_scaler * speed_sp[i];
 
-  if(still_count < 300){
+  
     for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
     {
       output[i] = chassis_controlSpeed(&chassis._motors[i], &motor_vel_controllers[i]);
@@ -265,17 +265,6 @@ static void drive_kinematics(const float strafe_vel, const float drive_vel, cons
       total_output += ABS(output[i]);
     #endif
     }
-  }
-  else{
-    for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
-    {
-      output[i] = chassis_controlPos(&chassis._motors[i], &motor_pos_controllers[i]);
-    #ifdef CHASSIS_POWER_LIMIT
-      total_output += ABS(output[i]);
-    #endif
-    }
-
-  }
 
   if(chassis.state & CHASSIS_SUSPEND_R)
   {
@@ -503,10 +492,6 @@ void chassis_init(void)
   params_set(&motor_vel_controllers[BACK_LEFT], 11,2,BLvelName,subname_PI,PARAM_PUBLIC);
   params_set(&motor_vel_controllers[BACK_RIGHT], 12,2,BRvelName,subname_PI,PARAM_PUBLIC);
 
-  params_set(&motor_pos_controllers[FRONT_LEFT], 5,2,FLposName,subname_PID,PARAM_PUBLIC);
-  params_set(&motor_pos_controllers[FRONT_RIGHT], 6,2,FRposName,subname_PID,PARAM_PUBLIC);
-  params_set(&motor_pos_controllers[BACK_LEFT], 7,2,BLposName,subname_PID,PARAM_PUBLIC);
-  params_set(&motor_pos_controllers[BACK_RIGHT], 8,2,BRposName,subname_PID,PARAM_PUBLIC);
 
   params_set(&heading_controller, 17,3,HeadingName,subname_PID,PARAM_PUBLIC);
 

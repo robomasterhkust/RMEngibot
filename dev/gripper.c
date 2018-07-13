@@ -8,6 +8,7 @@
 #include "system_error.h"
 #include "params.h"
 #include "math_misc.h"
+#include "island.h"
 static ChassisEncoder_canStruct* gripper_encoders;
 static volatile motorPosStruct motors[GRIPPER_MOTOR_NUM];
 static float offset[GRIPPER_MOTOR_NUM];
@@ -111,25 +112,47 @@ void gripper_changePos(const float pos_sp1, const float pos_sp2)
     motors[1].pos_sp = offset[1] + pos_sp2;
   }
 
-  while(offset[0] - pos_sp1 != motors[0].pos_sp){
-    in_position[0] = false;
-
-    if(ABS(offset[0] - pos_sp1 - motors[0].pos_sp) < 0.008){
+  robot_state_t state=  island_getRobotState();
+  if(state == STATE_ISLAND_2|| state == STATE_ISLAND_4){
+     while(offset[0] - pos_sp1 != motors[0].pos_sp){
       in_position[0] = false;
-      motors[0].pos_sp = offset[0] - pos_sp1;
-    }
-    else{
-      if(offset[0] - pos_sp1 - motors[0].pos_sp > 0 ){
-        motors[0].pos_sp += 0.008;
+
+      if(ABS(offset[0] - pos_sp1 - motors[0].pos_sp) < 0.008){
+        in_position[0] = false;
+        motors[0].pos_sp = offset[0] - pos_sp1;
       }
       else{
-        motors[0].pos_sp -= 0.008;
+        if(offset[0] - pos_sp1 - motors[0].pos_sp > 0 ){
+          motors[0].pos_sp += 0.008;
+        }
+        else{
+          motors[0].pos_sp -= 0.008;
+        }
       }
+      chThdSleepMilliseconds(2);
+
     }
-    chThdSleepMilliseconds(2);
-
   }
+  else{
+    while(offset[0] - pos_sp1 != motors[0].pos_sp){
+      in_position[0] = false;
 
+      if(ABS(offset[0] - pos_sp1 - motors[0].pos_sp) < 0.004){
+        in_position[0] = false;
+        motors[0].pos_sp = offset[0] - pos_sp1;
+      }
+      else{
+        if(offset[0] - pos_sp1 - motors[0].pos_sp > 0 ){
+          motors[0].pos_sp += 0.004;
+        }
+        else{
+          motors[0].pos_sp -= 0.004;
+        }
+      }
+      chThdSleepMilliseconds(2);
+
+    }
+  }
 }
 
 

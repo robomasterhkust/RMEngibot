@@ -26,7 +26,6 @@ static param_t hero_interact_pos_sp[2];
 static float start_yaw;
 static systime_t pour_ammo_time = 0;
 static systime_t gripper_release_time = 0;
-static systime_t hero_interact_time = 0;
 
 island_state_t island_getState(void)
 {
@@ -40,7 +39,7 @@ robot_state_t island_getRobotState(void)
 
 void island_robotSetState(robot_state_t state)
 {
-  if(state < 0 || state > ROBOT_STATE_NUM)
+  if(state < STATE_GROUND || state > ROBOT_STATE_NUM)
     return;
   robot_state = state;
 }
@@ -134,7 +133,7 @@ static THD_FUNCTION(Island_thread, p)
         if(S2 == ASCEND_MODE && (s1_reset && island_ascend()))
         {
           island_robotSetState(STATE_ONFOOT);
-          gimbal_ToScreen();
+          //gimbal_ToScreen();
         }
         else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
           island_robotSetState(STATE_RUSHDOWN_1);//we can change this to resecue mode
@@ -187,7 +186,7 @@ static THD_FUNCTION(Island_thread, p)
         if(s1_reset && island_decend())
         {
           island_robotSetState(STATE_GROUND);
-          gimbal_ToStable();
+          //gimbal_ToStable();
         }
 
         if(S2 == DECEND_MODE && (s1_reset && island_decend()))
@@ -263,8 +262,8 @@ static THD_FUNCTION(Island_thread, p)
         case STATE_ROLLER_IN_LEFT:
         rangeFinder_control(RANGEFINDER_INDEX_LEFT_DOGBALL,  DISABLE);
 
-        lift_changePos( pos_sp[2]  , pos_sp[1]   ,
-         pos_sp[1] , pos_sp[1]  );
+        lift_changePos( pos_sp[1]  , pos_sp[1]   ,
+         pos_sp[2] , pos_sp[1]  );
 
         if(S2 == ASCEND_MODE &&
           (
@@ -278,7 +277,7 @@ static THD_FUNCTION(Island_thread, p)
         }
         else if(
          (s1_reset && island_decend())
-         ||pIMU->euler_angle[Pitch] > 0.2f
+         ||pIMU->euler_angle[Pitch] < - 0.2f
          )
           island_robotSetState(STATE_ROLLER_IN_2);
 
@@ -286,8 +285,8 @@ static THD_FUNCTION(Island_thread, p)
         case STATE_ROLLER_IN_RIGHT:
         rangeFinder_control(RANGEFINDER_INDEX_RIGHT_DOGBALL, DISABLE);
 
-        lift_changePos(pos_sp[1]  ,  pos_sp[2] ,
-         pos_sp[1]   ,    pos_sp[1]   );
+        lift_changePos(pos_sp[1]  ,  pos_sp[1] ,
+         pos_sp[1]   ,    pos_sp[2]   );
 
         if(S2 == ASCEND_MODE &&
           (
@@ -301,7 +300,7 @@ static THD_FUNCTION(Island_thread, p)
         }
         else if(
          (s1_reset && island_decend())
-         ||pIMU->euler_angle[Pitch] > 0.2f
+         ||pIMU->euler_angle[Pitch] < -0.2f
          )
           island_robotSetState(STATE_ROLLER_IN_2);
 
@@ -332,7 +331,7 @@ static THD_FUNCTION(Island_thread, p)
           (
             threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_BUM) < threshold[6], 3, &count_back_right) &&
             threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_BUM) < threshold[6], 3, &count_back_left) &&
-            pIMU->euler_angle[Pitch] < 0.2f
+            pIMU->euler_angle[Pitch] > -0.2f
             )
           )
         {
@@ -352,7 +351,7 @@ static THD_FUNCTION(Island_thread, p)
         }
         else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
           island_robotSetState(STATE_RUSHDOWN_1);
-        else if((s1_reset && island_decend()) || pIMU->euler_angle[Pitch] > 0.2f)
+        else if((s1_reset && island_decend()) || pIMU->euler_angle[Pitch] < -0.2f)
         {
           #ifdef ISLAND_AUTO_DRIVE
           chassis_autoCmd(CHASSIS_DRIVE, -20.0f);
@@ -433,7 +432,7 @@ static THD_FUNCTION(Island_thread, p)
 
         if(chVTGetSystemTimeX() > pour_ammo_time + MS2ST(1000))
         {
-          gripper_changePos(gripper_pos_sp[0], gripper_pos_sp[4]); //strech out. open hand
+          gripper_changePos(gripper_pos_sp[0], gripper_pos_sp[5]); //strech out. close hand
           gripper_release_time = chVTGetSystemTimeX();
           island_robotSetState(STATE_ISLAND_5);
         }
@@ -445,7 +444,7 @@ static THD_FUNCTION(Island_thread, p)
 
         if(chVTGetSystemTimeX() > gripper_release_time + MS2ST(700))
         {
-          //gripper_changePos(gripper_pos_sp[1], gripper_pos_sp[4]); //strech out. open hand
+          gripper_changePos(gripper_pos_sp[1], gripper_pos_sp[4]); //strech out. open hand
           if(gripper_inPosition(GRIPPER_HAND))
             island_robotSetState(STATE_ISLAND_1);
         }
@@ -493,7 +492,7 @@ static THD_FUNCTION(Island_thread, p)
         chassis_setAcclLimit(100U);
 
         if(lift_inPosition()
-          && threshold_count(pIMU->euler_angle[Pitch] > threshold[1], 3, &count))
+          && threshold_count(pIMU->euler_angle[Pitch] < threshold[1], 3, &count))
         {
           count_onGround = 0;
           island_robotSetState(STATE_RUSHDOWN_2);
@@ -513,7 +512,7 @@ static THD_FUNCTION(Island_thread, p)
         if(pIMU->euler_angle[Pitch] > threshold[2])
           count_onGround++;
 
-        if(count_onGround >= 2 && threshold_count(pIMU->euler_angle[Pitch] < threshold[3], 3, &count))
+        if(count_onGround >= 2 && threshold_count(pIMU->euler_angle[Pitch] > threshold[3], 3, &count))
         {
           if(island_state != STATE_STAIR_0)
             island_state--;
