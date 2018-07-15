@@ -117,9 +117,9 @@ void cmd_test(BaseSequentialStream * chp, int argc, char *argv[])
   chprintf(chp, "accelY: %f\r\n", pIMU->accelData[Y]);
   chprintf(chp, "accelZ: %f\r\n", pIMU->accelData[Z]);
 
-  chprintf(chp, "ROLL : %f\r\n", euler[Roll] * 180 / M_PI);
-  chprintf(chp, "PITCH: %f\r\n", euler[Pitch] * 180 / M_PI);
-  chprintf(chp, "YAW  : %f\r\n", euler[Yaw] * 180 / M_PI);
+  //chprintf(chp, "ROLL : %f\r\n", euler[Roll] * 180 / M_PI);
+  chprintf(chp, "PITCH: %f\r\n", pIMU->euler_angle[1]);
+  //chprintf(chp, "YAW  : %f\r\n", euler[Yaw] * 180 / M_PI);
 
   chprintf(chp, "Gripper0: %f\r\n", gripper[0]._pos);
   chprintf(chp, "Gripper1: %f\r\n", gripper[1]._pos);

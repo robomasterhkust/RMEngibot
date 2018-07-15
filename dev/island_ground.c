@@ -141,7 +141,10 @@ static THD_FUNCTION(Island_thread, p)
         {
           island_robotSetState(STATE_HERO_INTERACT_1);
         }
-
+        else if(S2 == LOCK_MODE &&(s1_reset && island_decend()))
+        {
+          island_robotSetState(STATE_HERO_RESCUE_1);
+        }
         break;
         case STATE_ONFOOT:
         DOG_ERECT();
@@ -430,7 +433,7 @@ static THD_FUNCTION(Island_thread, p)
         case STATE_ISLAND_4:
         DOG_RELAX();
 
-        if(chVTGetSystemTimeX() > pour_ammo_time + MS2ST(1000))
+        if(chVTGetSystemTimeX() > pour_ammo_time + MS2ST(500))
         {
           gripper_changePos(gripper_pos_sp[0], gripper_pos_sp[5]); //strech out. close hand
           gripper_release_time = chVTGetSystemTimeX();
@@ -442,9 +445,9 @@ static THD_FUNCTION(Island_thread, p)
         case STATE_ISLAND_5:
         DOG_RELAX();
 
-        if(chVTGetSystemTimeX() > gripper_release_time + MS2ST(700))
+        if(chVTGetSystemTimeX() > gripper_release_time + MS2ST(400))
         {
-          gripper_changePos(gripper_pos_sp[1], gripper_pos_sp[4]); //strech out. open hand
+          gripper_changePos(gripper_pos_sp[0], gripper_pos_sp[4]); //strech out. open hand
           if(gripper_inPosition(GRIPPER_HAND))
             island_robotSetState(STATE_ISLAND_1);
         }
@@ -464,7 +467,7 @@ static THD_FUNCTION(Island_thread, p)
           if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
             island_robotSetState(STATE_HERO_INTERACT_2);
           else if(S2 == LOCK_MODE && (s1_reset && island_decend()))
-            island_robotSetState(STATE_GROUND);
+            island_robotSetState(STATE_RESCUE_1);
         }
         break;
         case STATE_HERO_INTERACT_2:
@@ -473,6 +476,8 @@ static THD_FUNCTION(Island_thread, p)
         if(lift_inPosition()){
           if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
             island_robotSetState(STATE_HERO_INTERACT_3);
+          if(S2 == LOCK_MODE && (s1_reset && island_decend()))
+            island_robotSetState(STATE_GROUND);
         }
         break;
         case STATE_HERO_INTERACT_3:
@@ -483,6 +488,79 @@ static THD_FUNCTION(Island_thread, p)
           island_robotSetState(STATE_GROUND);
         }
         break;
+        case STATE_RESCUE_1:
+        DOG_ERECT();
+        lift_changePos(12,12,12,12);
+        if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
+            island_robotSetState(STATE_GROUND);
+        else if(S2 == LOCK_MODE && (s1_reset && island_decend()))
+            island_robotSetState(STATE_RESCUE_2);
+        break;
+
+
+        case STATE_RESCUE_2:
+        lift_changePos(8, 8,8,8);
+        if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
+            island_robotSetState(STATE_RESCUE_1);
+        else if(S2 == LOCK_MODE && (s1_reset && island_decend()))
+            island_robotSetState(STATE_RESCUE_3);
+        break;
+
+
+        case STATE_RESCUE_3:
+        DOG_RELAX();
+        if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
+            island_robotSetState(STATE_RESCUE_2);
+        else if(S2 == LOCK_MODE && (s1_reset && island_decend()))
+            island_robotSetState(STATE_RESCUE_4);
+        break;
+        case STATE_RESCUE_4:        
+        lift_changePos(12,12,12,12);
+        if(lift_inPosition){
+          if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
+            island_robotSetState(STATE_RESCUE_3);
+          else if(S2 == LOCK_MODE && (s1_reset && island_decend()))
+            island_robotSetState(STATE_GROUND);
+        }
+        break;
+
+        case STATE_HERO_RESCUE_1:
+        DOG_ERECT();        
+        lift_changePos(18,18,18,18);
+        if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
+            island_robotSetState(STATE_GROUND);
+        else if(S2 == LOCK_MODE && (s1_reset && island_decend()))
+            island_robotSetState(STATE_HERO_RESCUE_2);
+        break;
+
+        case STATE_HERO_RESCUE_2:
+        lift_changePos(10, 10,10,10);
+        if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
+            island_robotSetState(STATE_HERO_RESCUE_1);
+        else if(S2 == LOCK_MODE && (s1_reset && island_decend()))
+            island_robotSetState(STATE_HERO_RESCUE_3);
+        break;
+
+
+        case STATE_HERO_RESCUE_3:
+        DOG_RELAX();
+        if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
+            island_robotSetState(STATE_HERO_RESCUE_2);
+        else if(S2 == LOCK_MODE && (s1_reset && island_decend()))
+            island_robotSetState(STATE_HERO_RESCUE_4);
+        break;
+
+        case STATE_HERO_RESCUE_4:        
+        lift_changePos(22,22,22,22);
+        if(lift_inPosition){
+          if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
+            island_robotSetState(STATE_HERO_RESCUE_3);
+          else if(S2 == LOCK_MODE && (s1_reset && island_decend()))
+            island_robotSetState(STATE_GROUND);
+        }
+        break;
+
+
         case STATE_RUSHDOWN_1:
         DOG_RELAX();
         
@@ -495,7 +573,6 @@ static THD_FUNCTION(Island_thread, p)
         if(lift_inPosition()
           && threshold_count(pIMU->euler_angle[Pitch] < threshold[1], 3, &count))
         {
-          count_onGround = 0;
           island_robotSetState(STATE_RUSHDOWN_2);
         }
         else if(S2 == DECEND_MODE && (s1_reset && island_ascend()))
@@ -508,22 +585,21 @@ static THD_FUNCTION(Island_thread, p)
         break;
         case STATE_RUSHDOWN_2:
         lift_set_state(LIFT_SUSPEND_B);
-        if(pIMU->euler_angle[Pitch] > threshold[2])
-          count_onGround++;
-
-        if(count_onGround >= 2 && threshold_count(pIMU->euler_angle[Pitch] < threshold[3], 3, &count))
+        if(threshold_count(pIMU->euler_angle[Pitch] < threshold[3], 3, &count))
         {
-          if(island_state != STATE_STAIR_0)
-            island_state--;
 
-          if(island_state == STATE_STAIR_1){
+          if(island_state == STATE_STAIR_2){
+            island_state = STATE_STAIR_1;
             island_robotSetState(STATE_RUSHDOWN_1);
             lift_set_state(LIFT_RUNNING);
+            count = 0;
           }
           
-          else if(island_state == STATE_STAIR_0){
+          else if(island_state == STATE_STAIR_1){
+            island_state = STATE_STAIR_0;
             island_robotSetState(STATE_GROUND);
             lift_set_state(LIFT_RUNNING);
+            count = 0;
           }
         }
         else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
@@ -552,7 +628,7 @@ static THD_FUNCTION(Island_thread, p)
   static const char PosSubName[] = "ArmAway ArmOut ArmIn ArmUp Open Close";
 
   static const char PosInteractName[] = "Hero interact";
-  static const char PosInteractSubName[] = "front back";
+  static const char PosInteractSubName[] = "front back rescue_up rescue_down ";
 
 
 
