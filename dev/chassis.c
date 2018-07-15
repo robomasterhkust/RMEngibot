@@ -60,7 +60,7 @@ void chassis_headingLockCmd(const uint8_t cmd)
 {
   if(cmd == DISABLE)
     chassis.state &= ~(CHASSIS_HEADING_LOCK);
-  else if(!(chassis.state & CHASSIS_HEADING_LOCK) && cmd != DISABLE)
+  else if(!(chassis.state & CHASSIS_HEADING_LOCK) && cmd == ENABLE)
   {
     chSysLock();
     chassis.state |= CHASSIS_HEADING_LOCK;
@@ -120,19 +120,43 @@ static void chassis_inputCmd(void)
   if(ABS(RX_X1) < THRESHOLD)
     RX_X1 = 0;
 
-  if(RX_X2 > strafe_rc + CHASSIS_XYACCL_LIMIT_RATIO * rc_accl_limit)
-    strafe_rc += CHASSIS_XYACCL_LIMIT_RATIO * rc_accl_limit;
-  else if(RX_X2 < strafe_rc - CHASSIS_XYACCL_LIMIT_RATIO * rc_accl_limit)
-    strafe_rc -= CHASSIS_XYACCL_LIMIT_RATIO * rc_accl_limit;
-  else
-    strafe_rc = RX_X2 ;
+  if(ABS(RX_X2) > ABS(strafe_rc)) //Accelerate
+  {
+    if(RX_X2 > strafe_rc + rc_accl_limit)
+      strafe_rc += rc_accl_limit;
+    else if(RX_X2 < strafe_rc - rc_accl_limit)
+      strafe_rc -= rc_accl_limit;
+    else
+      strafe_rc = RX_X2;
+  }
+  else //Brake
+  {
+    if(RX_X2 > strafe_rc + rc_accl_limit * 2.0f)
+      strafe_rc += rc_accl_limit * 2.0f;
+    else if(RX_X2 < strafe_rc - rc_accl_limit * 2.0f)
+      strafe_rc -= rc_accl_limit * 2.0f;
+    else
+      strafe_rc = RX_X2;
+  }
 
-  if(RX_Y1 > drive_rc + rc_accl_limit)
-    drive_rc += rc_accl_limit;
-  else if(RX_Y1 < drive_rc - rc_accl_limit)
-    drive_rc -= rc_accl_limit;
-  else
-    drive_rc = RX_Y1;
+  if(ABS(RX_Y1) > ABS(drive_rc)) //Accelerate
+  {
+    if(RX_Y1 > drive_rc + rc_accl_limit)
+      drive_rc += rc_accl_limit;
+    else if(RX_Y1 < drive_rc - rc_accl_limit)
+      drive_rc -= rc_accl_limit;
+    else
+      drive_rc = RX_Y1;
+  }
+  else //Brake
+  {
+    if(RX_Y1 > drive_rc + rc_accl_limit * 2.0f)
+      drive_rc += rc_accl_limit * 2.0f;
+    else if(RX_Y1 < drive_rc - rc_accl_limit * 2.0f)
+      drive_rc -= rc_accl_limit * 2.0f;
+    else
+      drive_rc = RX_Y1;
+  }
 
   heading_rc = RX_X1;
 
@@ -257,7 +281,7 @@ static void drive_kinematics(const float strafe_vel, const float drive_vel, cons
   for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
     chassis._motors[i].speed_sp = speed_scaler * speed_sp[i];
 
-  
+
     for (i = 0; i < CHASSIS_MOTOR_NUM; i++)
     {
       output[i] = chassis_controlSpeed(&chassis._motors[i], &motor_vel_controllers[i]);
@@ -290,7 +314,7 @@ static void drive_kinematics(const float strafe_vel, const float drive_vel, cons
   #endif
 
   can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID,
-      	output[FRONT_RIGHT], output[FRONT_LEFT], output[BACK_LEFT],output[BACK_RIGHT] ); 
+      	output[FRONT_RIGHT], output[FRONT_LEFT], output[BACK_LEFT],output[BACK_RIGHT] );
 }
 
 /*
@@ -368,7 +392,8 @@ static THD_FUNCTION(chassis_control, p)
 
   chThdSleepSeconds(2);
 
-  uint32_t tick = chVTGetSystemTimeX();
+  systime_t tick = chVTGetSystemTimeX();
+  systime_t last_tick = chVTGetSystemTimeX();
   while(1)
   {
     tick += US2ST(CHASSIS_UPDATE_PERIOD_US);
@@ -442,7 +467,11 @@ static THD_FUNCTION(chassis_control, p)
         if(chassis.state & CHASSIS_AUTO_HEADING)
           heading_sp = chassis.heading_cmd;
         else
-          heading_sp -= heading_input * CHASSIS_UPDATE_PERIOD_US / 1e6;
+        {
+          float dt = ST2US(chVTGetSystemTimeX() - last_tick)/1e6f;
+          last_tick = chVTGetSystemTimeX();
+          heading_sp -= heading_input * dt;
+        }
 
         float error = heading_sp - pIMU->euler_angle[Yaw];
 
@@ -451,12 +480,23 @@ static THD_FUNCTION(chassis_control, p)
         drive_vel = cosine * drive + sine * strafe;
         strafe_vel = cosine * strafe - sine * drive;
 
-        heading_controller.error_int += error * heading_controller.ki;
-        bound(&(heading_controller.error_int), heading_controller.error_int_max);
-        heading_vel = heading_controller.kp * error + heading_controller.error_int -
+        heading_vel = heading_controller.kp * error -
                       heading_controller.kd * pIMU->d_euler_angle[Yaw];
 
-        bound(&heading_vel, HEADING_MAX_AUTO);
+        static uint32_t error_count = 0;
+        if(error > 0.2f || error < -0.2f) //Stuck protection
+          error_count++;
+        else
+          error_count = 0;
+
+        if(error_count > 2000U)
+        (
+          heading_vel = 0.0f;
+          heading_sp = pIMU->euler_angle[Yaw];
+        )
+
+        heading_vel += heading_input; //Feed_forward term, only used in manual input mode;
+        bound(&heading_vel, HEADING_MAX);
       }
       else
         heading_vel = heading_input;

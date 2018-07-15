@@ -116,17 +116,18 @@ static THD_FUNCTION(Island_thread, p)
     switch(robot_state)
     {
       case STATE_GROUND:
-      rangeFinder_control(RANGEFINDER_INDEX_LEFT_BUM,DISABLE);
-      rangeFinder_control(RANGEFINDER_INDEX_RIGHT_BUM,DISABLE);
-      case STATE_TEST:
-      DOG_RELAX();
-      CLOSE_LID();
-      gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[4]); //swing back, open hand
+        rangeFinder_control(RANGEFINDER_INDEX_LEFT_BUM,DISABLE);
+        rangeFinder_control(RANGEFINDER_INDEX_RIGHT_BUM,DISABLE);
+        case STATE_TEST:
+        DOG_RELAX();
+        CLOSE_LID();
 
-      chassis_setSpeedLimit(1.0f);
-      chassis_setAcclLimit(100);
-      chassis_headingLockCmd(DISABLE);
-      chassis_killAutoDriver();
+        gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[4]); //swing back, open hand
+
+        chassis_setSpeedLimit(1.0f);
+        chassis_setAcclLimit(ISLAND_ACCL_LIMIT_HIGH);
+        chassis_headingLockCmd(ENABLE);
+        chassis_killAutoDriver();
 
         lift_changePos(pos_sp[6], pos_sp[6],pos_sp[6],pos_sp[6]);
 
@@ -146,22 +147,20 @@ static THD_FUNCTION(Island_thread, p)
           island_robotSetState(STATE_HERO_RESCUE_1);
         }
         break;
-        case STATE_ONFOOT:
-        DOG_ERECT();
-        #ifndef ISLAND_AUTO_DRIVE
-        chassis_killAutoDriver();
-        #endif
+      case STATE_ONFOOT:
+        lift_changePos(pos_sp[0], pos_sp[0],pos_sp[0],pos_sp[0]);
+
+        if(lift_inPosition())
+          DOG_ERECT();
 
         rangeFinder_control(RANGEFINDER_INDEX_NOSE, ENABLE);
         rangeFinder_control(RANGEFINDER_INDEX_LEFT_BUM,DISABLE);
         rangeFinder_control(RANGEFINDER_INDEX_RIGHT_BUM,DISABLE);
 
-
-        //Pos0: on_foot position setpoint
-        lift_changePos(pos_sp[0]  , pos_sp[0]   ,
-          pos_sp[0]  , pos_sp[0]  );
+        chassis_headingLockCmd(ENABLE);
         chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_HIGH);
         chassis_setAcclLimit(ISLAND_ACCL_LIMIT_LOW);
+        chassis_killAutoDriver();
 
         if(S2 == ASCEND_MODE)
         {
@@ -171,14 +170,9 @@ static THD_FUNCTION(Island_thread, p)
             island_robotSetState(STATE_ROLLER_IN);
             roller_in_start = chVTGetSystemTimeX();
             //no gyro, disable this
-            chassis_headingLockCmd(DISABLE);
           }
           else if(
-            island_state == STATE_STAIR_1 &&
-            lift_inPosition() &&
-            (threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_NOSE) < threshold[4], 6, &count)
-              ||s1_reset && island_ascend())
-
+            lift_inPosition() && s1_reset && island_ascend()
             )
           {
             island_robotSetState(STATE_ROLLER_IN);
@@ -196,18 +190,21 @@ static THD_FUNCTION(Island_thread, p)
           island_robotSetState(STATE_RUSHDOWN_1);
 
         break;
-        case STATE_ROLLER_IN:
+      case STATE_ROLLER_IN:
+        DOG_ERECT();
+
         rangeFinder_control(RANGEFINDER_INDEX_NOSE, DISABLE);
+
+        chassis_headingLockCmd(ENABLE);
+        chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_HIGH);
+        chassis_setAcclLimit(ISLAND_ACCL_LIMIT_HIGH);
+        #ifdef ISLAND_AUTO_DRIVE
+          if(lift_inPosition())
+            chassis_autoCmd(CHASSIS_DRIVE, 100.0f);
+        #endif
 
         lift_changePos( pos_sp[1]  , pos_sp[1]  ,
           pos_sp[2]  , pos_sp[2]  );
-        chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_HIGH);
-        chassis_setAcclLimit(ISLAND_ACCL_LIMIT_HIGH);
-
-        #ifdef ISLAND_AUTO_DRIVE
-        if(lift_inPosition())
-          chassis_autoCmd(CHASSIS_DRIVE, -150.0f);
-        #endif
 
         if(S2 == ASCEND_MODE &&
           (
@@ -222,9 +219,13 @@ static THD_FUNCTION(Island_thread, p)
           island_robotSetState(STATE_ONFOOT);
 
         break;
-        case STATE_ROLLER_IN_2:
+      case STATE_ROLLER_IN_2:
+        DOG_ERECT();
+
         rangeFinder_control(RANGEFINDER_INDEX_LEFT_DOGBALL,  ENABLE);
         rangeFinder_control(RANGEFINDER_INDEX_RIGHT_DOGBALL, ENABLE);
+
+        chassis_headingLockCmd(ENABLE);
 
         lift_changePos(  pos_sp[1]  , pos_sp[1],
          pos_sp[2]  , pos_sp[2] );
@@ -240,7 +241,7 @@ static THD_FUNCTION(Island_thread, p)
             threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL) < threshold[5], 6, &count_left)))
         {
           #ifdef ISLAND_AUTO_DRIVE
-          chassis_autoCmd(CHASSIS_DRIVE, -20.0f);
+            chassis_autoCmd(CHASSIS_DRIVE, 20.0f);
           #endif
           island_robotSetState(STATE_ROLLER_IN_LEFT);
         }
@@ -250,9 +251,9 @@ static THD_FUNCTION(Island_thread, p)
             threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_DOGBALL) < threshold[5], 6, &count_right)))
         {
           #ifdef ISLAND_AUTO_DRIVE
-          chassis_autoCmd(CHASSIS_DRIVE, -20.0f);
+            chassis_autoCmd(CHASSIS_DRIVE, 20.0f);
           #endif
-          island_robotSetState(STATE_ROLLER_IN_RIGHT);
+            island_robotSetState(STATE_ROLLER_IN_RIGHT);
         }
 
         else if(s1_reset && island_decend())
@@ -262,8 +263,10 @@ static THD_FUNCTION(Island_thread, p)
         }
 
         break;
-        case STATE_ROLLER_IN_LEFT:
+      case STATE_ROLLER_IN_LEFT:
         rangeFinder_control(RANGEFINDER_INDEX_LEFT_DOGBALL,  DISABLE);
+
+        chassis_headingLockCmd(ENABLE);
 
         lift_changePos( pos_sp[1]  , pos_sp[1]   ,
          pos_sp[2] , pos_sp[1]  );
@@ -285,8 +288,10 @@ static THD_FUNCTION(Island_thread, p)
           island_robotSetState(STATE_ROLLER_IN_2);
 
         break;
-        case STATE_ROLLER_IN_RIGHT:
+      case STATE_ROLLER_IN_RIGHT:
         rangeFinder_control(RANGEFINDER_INDEX_RIGHT_DOGBALL, DISABLE);
+
+        chassis_headingLockCmd(ENABLE);
 
         lift_changePos(pos_sp[1]  ,  pos_sp[1] ,
          pos_sp[1]   ,    pos_sp[2]   );
@@ -308,15 +313,18 @@ static THD_FUNCTION(Island_thread, p)
           island_robotSetState(STATE_ROLLER_IN_2);
 
         break;
-        case STATE_CRAW:
+      case STATE_CRAW:
+        DOG_RELAX();
+
         rangeFinder_control(RANGEFINDER_INDEX_LEFT_DOGBALL,  DISABLE);
         rangeFinder_control(RANGEFINDER_INDEX_RIGHT_DOGBALL, DISABLE);
-        chassis_headingLockCmd(DISABLE);
+
+        chassis_headingLockCmd(ENABLE);
         #ifdef ISLAND_AUTO_DRIVE
-        if(lift_inPosition())
-          chassis_autoCmd(CHASSIS_DRIVE, -150.0f);
+          if(lift_inPosition())
+            chassis_autoCmd(CHASSIS_DRIVE, 100.0f);
         #endif
-        DOG_RELAX();
+
         chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_HIGH);
         chassis_setAcclLimit(ISLAND_SPEED_LIMIT_HIGH);
 
@@ -339,14 +347,7 @@ static THD_FUNCTION(Island_thread, p)
           )
         {
           if(island_state == STATE_STAIR_1)
-          {
             island_robotSetState(STATE_ONFOOT);
-
-            #ifdef ISLAND_AUTO_DRIVE
-            chassis_autoCmd(CHASSIS_DRIVE, -75.0f);
-            chassis_autoCmd(CHASSIS_HEADING, start_yaw + DEG2RAD(90.0f));
-            #endif
-          }
           else if(island_state == STATE_STAIR_2)
             island_robotSetState(STATE_ISLAND_1);
           else
@@ -357,21 +358,23 @@ static THD_FUNCTION(Island_thread, p)
         else if((s1_reset && island_decend()) || pIMU->euler_angle[Pitch] < -0.2f)
         {
           #ifdef ISLAND_AUTO_DRIVE
-          chassis_autoCmd(CHASSIS_DRIVE, -20.0f);
+            chassis_autoCmd(CHASSIS_DRIVE, 20.0f);
           #endif
           island_robotSetState(STATE_ROLLER_IN_2);
           island_state--;
         }
 
         break;
-        case STATE_ISLAND_1:
+      case STATE_ISLAND_1:
         DOG_RELAX();
+
         chassis_headingLockCmd(DISABLE);
         chassis_killAutoDriver();
-        lift_changePos(pos_sp[4]  , pos_sp[4]   ,
-          pos_sp[4]  , pos_sp[4]  );
         chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_LOW);
         chassis_setAcclLimit(ISLAND_ACCL_LIMIT_LOW);
+
+        lift_changePos(pos_sp[4]  , pos_sp[4]   ,
+          pos_sp[4]  , pos_sp[4]  );
 
         if(chVTGetSystemTimeX() - gripper_release_time > MS2ST(1000))
           gripper_changePos(gripper_pos_sp[3], gripper_pos_sp[4]); //strech up, open hand
@@ -381,8 +384,10 @@ static THD_FUNCTION(Island_thread, p)
         else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
           island_robotSetState(STATE_RUSHDOWN_1);
         break;
-        case STATE_ISLAND_2:
+      case STATE_ISLAND_2:
         DOG_RELAX();
+
+        chassis_headingLockCmd(DISABLE);
 
         //strech out, open hand
         lift_changePos(pos_sp[4]  , pos_sp[4]   ,
@@ -401,8 +406,10 @@ static THD_FUNCTION(Island_thread, p)
         else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
           island_robotSetState(STATE_RUSHDOWN_1);
         break;
-        case STATE_ISLAND_3:
+      case STATE_ISLAND_3:
         DOG_RELAX();
+
+        chassis_headingLockCmd(DISABLE);
 
         if(gripper_inPosition(GRIPPER_HAND))
         {
@@ -430,8 +437,10 @@ static THD_FUNCTION(Island_thread, p)
           island_robotSetState(STATE_RUSHDOWN_1);
         }
         break;
-        case STATE_ISLAND_4:
+      case STATE_ISLAND_4:
         DOG_RELAX();
+
+        chassis_headingLockCmd(DISABLE);
 
         if(chVTGetSystemTimeX() > pour_ammo_time + MS2ST(500))
         {
@@ -442,8 +451,10 @@ static THD_FUNCTION(Island_thread, p)
         else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
           island_robotSetState(STATE_RUSHDOWN_1);
         break;
-        case STATE_ISLAND_5:
+      case STATE_ISLAND_5:
         DOG_RELAX();
+
+        chassis_headingLockCmd(DISABLE);
 
         if(chVTGetSystemTimeX() > gripper_release_time + MS2ST(400))
         {
@@ -454,9 +465,12 @@ static THD_FUNCTION(Island_thread, p)
         else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
           island_robotSetState(STATE_RUSHDOWN_1);
         break;
-        case STATE_HERO_INTERACT_1:
+      case STATE_HERO_INTERACT_1:
         DOG_RELAX();
         CLOSE_LID();
+
+        chassis_headingLockCmd(ENABLE);
+
         lift_changePos(hero_interact_pos_sp[0]  , hero_interact_pos_sp[0]   ,
          hero_interact_pos_sp[0] ,hero_interact_pos_sp[0]  );
         chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_LOW);
@@ -470,7 +484,9 @@ static THD_FUNCTION(Island_thread, p)
             island_robotSetState(STATE_RESCUE_1);
         }
         break;
-        case STATE_HERO_INTERACT_2:
+      case STATE_HERO_INTERACT_2:
+        chassis_headingLockCmd(ENABLE);
+
         lift_changePos(hero_interact_pos_sp[0]  , hero_interact_pos_sp[0]   ,
          hero_interact_pos_sp[1] ,hero_interact_pos_sp[1]  );
         if(lift_inPosition()){
@@ -480,16 +496,22 @@ static THD_FUNCTION(Island_thread, p)
             island_robotSetState(STATE_GROUND);
         }
         break;
-        case STATE_HERO_INTERACT_3:
+      case STATE_HERO_INTERACT_3:
         POUR_AMMO();
+
+        chassis_headingLockCmd(ENABLE);
+
         if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
         {
           CLOSE_LID();
           island_robotSetState(STATE_GROUND);
         }
         break;
-        case STATE_RESCUE_1:
+      case STATE_RESCUE_1:
         DOG_ERECT();
+
+        chassis_headingLockCmd(ENABLE);
+
         lift_changePos(12,12,12,12);
         if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
             island_robotSetState(STATE_GROUND);
@@ -498,7 +520,10 @@ static THD_FUNCTION(Island_thread, p)
         break;
 
 
-        case STATE_RESCUE_2:
+      case STATE_RESCUE_2:
+
+        chassis_headingLockCmd(ENABLE);
+
         lift_changePos(8, 8,8,8);
         if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
             island_robotSetState(STATE_RESCUE_1);
@@ -507,14 +532,17 @@ static THD_FUNCTION(Island_thread, p)
         break;
 
 
-        case STATE_RESCUE_3:
+      case STATE_RESCUE_3:
         DOG_RELAX();
+
+        chassis_headingLockCmd(ENABLE);
+
         if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
             island_robotSetState(STATE_RESCUE_2);
         else if(S2 == LOCK_MODE && (s1_reset && island_decend()))
             island_robotSetState(STATE_RESCUE_4);
         break;
-        case STATE_RESCUE_4:        
+        case STATE_RESCUE_4:
         lift_changePos(12,12,12,12);
         if(lift_inPosition){
           if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
@@ -524,8 +552,11 @@ static THD_FUNCTION(Island_thread, p)
         }
         break;
 
-        case STATE_HERO_RESCUE_1:
-        DOG_ERECT();        
+      case STATE_HERO_RESCUE_1:
+
+        chassis_headingLockCmd(ENABLE);
+
+        DOG_ERECT();
         lift_changePos(18,18,18,18);
         if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
             island_robotSetState(STATE_GROUND);
@@ -533,7 +564,10 @@ static THD_FUNCTION(Island_thread, p)
             island_robotSetState(STATE_HERO_RESCUE_2);
         break;
 
-        case STATE_HERO_RESCUE_2:
+      case STATE_HERO_RESCUE_2:
+
+        chassis_headingLockCmd(ENABLE);
+
         lift_changePos(10, 10,10,10);
         if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
             island_robotSetState(STATE_HERO_RESCUE_1);
@@ -542,7 +576,10 @@ static THD_FUNCTION(Island_thread, p)
         break;
 
 
-        case STATE_HERO_RESCUE_3:
+      case STATE_HERO_RESCUE_3:
+
+        chassis_headingLockCmd(ENABLE);
+
         DOG_RELAX();
         if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
             island_robotSetState(STATE_HERO_RESCUE_2);
@@ -550,7 +587,10 @@ static THD_FUNCTION(Island_thread, p)
             island_robotSetState(STATE_HERO_RESCUE_4);
         break;
 
-        case STATE_HERO_RESCUE_4:        
+      case STATE_HERO_RESCUE_4:
+
+        chassis_headingLockCmd(ENABLE);
+
         lift_changePos(22,22,22,22);
         if(lift_inPosition){
           if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
@@ -561,9 +601,11 @@ static THD_FUNCTION(Island_thread, p)
         break;
 
 
-        case STATE_RUSHDOWN_1:
+      case STATE_RUSHDOWN_1:
         DOG_RELAX();
-        
+
+        chassis_headingLockCmd(DISABLE);
+
         lift_changePos(  pos_sp[6]  , pos_sp[6],
           pos_sp[3]  , pos_sp[3]   );
         gripper_changePos(gripper_pos_sp[2], gripper_pos_sp[4]); //swing back, open hand
@@ -583,8 +625,11 @@ static THD_FUNCTION(Island_thread, p)
         }
 
         break;
-        case STATE_RUSHDOWN_2:
+      case STATE_RUSHDOWN_2:
+
+        chassis_headingLockCmd(DISABLE);
         lift_set_state(LIFT_SUSPEND_B);
+
         if(threshold_count(pIMU->euler_angle[Pitch] < threshold[3], 3, &count))
         {
 
@@ -594,7 +639,7 @@ static THD_FUNCTION(Island_thread, p)
             lift_set_state(LIFT_RUNNING);
             count = 0;
           }
-          
+
           else if(island_state == STATE_STAIR_1){
             island_state = STATE_STAIR_0;
             island_robotSetState(STATE_GROUND);

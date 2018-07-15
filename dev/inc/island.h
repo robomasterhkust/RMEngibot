@@ -4,8 +4,8 @@
 #define ISLAND_SPEED_LIMIT_LOW    0.2f
 #define ISLAND_SPEED_LIMIT_HIGH   0.5f
 
-#define ISLAND_ACCL_LIMIT_LOW    1.0f
-#define ISLAND_ACCL_LIMIT_HIGH   4.0f
+#define ISLAND_ACCL_LIMIT_LOW    0.75f
+#define ISLAND_ACCL_LIMIT_HIGH   1.5f
 
 typedef enum {
   STATE_GROUND = 0,
@@ -58,7 +58,7 @@ typedef enum {
 #define CLOSE_LID() (PN1_OFF())
 
 #define ISLAND_UPDATE_PERIOD_MS 5
-//#define ISLAND_AUTO_DRIVE
+#define ISLAND_AUTO_DRIVE
 
 island_state_t island_getState(void);
 robot_state_t island_getRobotState(void);
