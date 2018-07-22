@@ -141,7 +141,7 @@ void lift_calibrate(void)
   //CAUTION!! Moving lift wheel may cause injury, stay back during power up!!
 
   // uint8_t init_state = 0;
-
+  lift_state = LIFT_INITING;
   BUZZER(500);
   chThdSleepMilliseconds(500);
   BUZZER(0);

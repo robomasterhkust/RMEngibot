@@ -117,16 +117,16 @@ void gripper_changePos(const float pos_sp1, const float pos_sp2)
      while(offset[0] - pos_sp1 != motors[0].pos_sp){
       in_position[0] = false;
 
-      if(ABS(offset[0] - pos_sp1 - motors[0].pos_sp) < 0.0054){
-        in_position[0] = false;
+      if(ABS(offset[0] - pos_sp1 - motors[0].pos_sp) < 0.0056){
+        
         motors[0].pos_sp = offset[0] - pos_sp1;
       }
       else{
         if(offset[0] - pos_sp1 - motors[0].pos_sp > 0 ){
-          motors[0].pos_sp += 0.0054;
+          motors[0].pos_sp += 0.0056;
         }
         else{
-          motors[0].pos_sp -= 0.0054;
+          motors[0].pos_sp -= 0.0056;
         }
       }
       chThdSleepMilliseconds(2);
@@ -137,16 +137,16 @@ void gripper_changePos(const float pos_sp1, const float pos_sp2)
     while(offset[0] - pos_sp1 != motors[0].pos_sp){
       in_position[0] = false;
 
-      if(ABS(offset[0] - pos_sp1 - motors[0].pos_sp) < 0.004){
-        in_position[0] = false;
+      if(ABS(offset[0] - pos_sp1 - motors[0].pos_sp) < 0.0042){
+        
         motors[0].pos_sp = offset[0] - pos_sp1;
       }
       else{
         if(offset[0] - pos_sp1 - motors[0].pos_sp > 0 ){
-          motors[0].pos_sp += 0.004;
+          motors[0].pos_sp += 0.0042;
         }
         else{
-          motors[0].pos_sp -= 0.004;
+          motors[0].pos_sp -= 0.0042;
         }
       }
       chThdSleepMilliseconds(2);
@@ -266,7 +266,7 @@ void gripper_calibrate(void)
 {
   //To initialize the lift wheel, a calibration is needed
   //CAUTION!! Moving lift wheel may cause injury, stay back during power up!!
-
+  gripper_state = GRIPPER_INITING;
   bool init_state[GRIPPER_MOTOR_NUM] = {0, 0};
 
   float prev_pos[GRIPPER_MOTOR_NUM];
@@ -322,7 +322,7 @@ void gripper_calibrate(void)
 static const ArmName = "Gripper Arm";
 static const HandName = "Gripper Hand";
 
-#define GRIPPER_ERROR_INT_MAX  30000
+#define GRIPPER_ERROR_INT_MAX  10000
 void gripper_init(void)
 {
   rc = RC_get();

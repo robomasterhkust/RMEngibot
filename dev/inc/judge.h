@@ -182,7 +182,7 @@ typedef struct user_data_t{
 
 #endif 
 
-judge_fb_t judgeDataGet(void);
+judge_fb_t* judgeDataGet(void);
 
 void judgedecode(void);
 

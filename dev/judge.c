@@ -233,7 +233,7 @@ static uint8_t sdrxbuf[JUDGE_BUFFER_SIZE];
 
 static uint8_t outcount = 0;
 static size_t outsize = 0;
-static uint8_t sdtxbuf[30];
+static uint8_t sdtxbuf[22];
 
 #ifdef JUDGE_USE_2017
 static game_info_t gameInfo[1];
@@ -256,9 +256,9 @@ static void* datagroups[JUDGE_DATA_TYPES + 1];
 /*
  * returns all judgment system sata
  */
-judge_fb_t judgeDataGet(void) {
+judge_fb_t* judgeDataGet(void) {
 
-  return judgeInData;
+  return &judgeInData;
 
 }
 
@@ -267,29 +267,30 @@ judge_fb_t judgeDataGet(void) {
  * input: 3 float and 1 byte of data
  * return: length of data sent (in bytes)
  */
-
 size_t judgeDataWrite(float a, float b, float c, uint8_t mask) {
 
   memset((void*)sdtxbuf, 0, sizeof(sdtxbuf));
 
   sdtxbuf[0] = JUDGE_FRAMEHEAD;                             //Append frame head
-  sdtxbuf[1] = 0;                                           //Append frame length : 1
-  sdtxbuf[2] = 17;                                          //Append frame length : 0
+  sdtxbuf[1] = 13;                                           //Append frame length : 1
+  sdtxbuf[2] = 0;   //17                                       //Append frame length : 0
   sdtxbuf[3] = outcount;                                    //Append frame count
+  // sdtxbuf[3] = lastpacketID++;
   outcount++;
   Append_CRC8_Check_Sum(sdtxbuf, 5);    //Append frame CRC8
 
-  sdtxbuf[6] = 1;                                           //Append frame type : 1
-  sdtxbuf[7] = 0;                                           //Append frame type : 0
+  sdtxbuf[5] = 0; // 6                                           //Append frame type : 1
+  sdtxbuf[6] = 1; // 7                                          //Append frame type : 0
 
-  memcpy(sdtxbuf + 8, &a, 4);                         //Append frame data
-  memcpy(sdtxbuf + 12, &b, 4);                        //Append frame data
-  memcpy(sdtxbuf + 16, &c, 4);                        //Append frame data
-  memcpy(sdtxbuf + 17, &mask, 1);                     //Append frame data
+  memcpy(sdtxbuf + 7, &a, sizeof(float));                         //Append frame data
+  memcpy(sdtxbuf + 11, &b, sizeof(float));                        //Append frame data
+  memcpy(sdtxbuf + 15, &c, sizeof(float));                        //Append frame data
+  memcpy(sdtxbuf + 19, &mask, 1);                     //Append frame data
 
-  Append_CRC16_Check_Sum(sdtxbuf, 20);               //Append frame CRC16
+  Append_CRC16_Check_Sum(sdtxbuf, 22);               //Append frame CRC16
 
-  outsize = sdWriteTimeout(SERIAL_JUDGE, sdtxbuf, 20, 20);  //Send frame
+  // outsize = sdWriteTimeout(SERIAL_JUDGE, sdtxbuf, 22, 22);  //Send frame
+  sdAsynchronousWrite(SERIAL_JUDGE, sdtxbuf, 22);
 
   return outsize;
 

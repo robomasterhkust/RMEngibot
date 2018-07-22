@@ -9,6 +9,7 @@
 #include "gripper.h"
 #include "math_misc.h"
 #include "gimbal.h"
+#include "judge.h"
 static PIMUStruct pIMU;
 static RC_Ctl_t* rc;
 
@@ -100,8 +101,17 @@ static THD_FUNCTION(Island_thread, p)
     S1 = rc->rc.s1;
     S2 = rc->rc.s2;
 
+    if(rc->keyboard.key_code & KEY_Q){
+      lift_calibrate();
+    }
+    if(rc->keyboard.key_code & KEY_W){
+      gripper_calibrate();
+    }
+    if(rc->keyboard.key_code & KEY_E){
+      gimbal_calibrate();
+    }
     /* robot_state controller for island climbing machine*/
-    if(S1 == S1_RESET && !(rc->keyboard.key_code & (KEY_F | KEY_R)))
+    if(S1 == S1_RESET)
     {
       s1_reset = true;
     }
@@ -118,6 +128,7 @@ static THD_FUNCTION(Island_thread, p)
       case STATE_GROUND:
         rangeFinder_control(RANGEFINDER_INDEX_LEFT_BUM,DISABLE);
         rangeFinder_control(RANGEFINDER_INDEX_RIGHT_BUM,DISABLE);
+        rangeFinder_control(RANGEFINDER_INDEX_NOSE,DISABLE);
         case STATE_TEST:
         DOG_RELAX();
         CLOSE_LID();
@@ -145,6 +156,9 @@ static THD_FUNCTION(Island_thread, p)
         else if(S2 == LOCK_MODE &&(s1_reset && island_decend()))
         {
           island_robotSetState(STATE_HERO_RESCUE_1);
+        }
+        else if(S2 = ASCEND_MODE && (s1_reset && island_decend())){
+          island_robotSetState(STATE_ISLAND_1);
         }
         break;
       case STATE_ONFOOT:
@@ -175,7 +189,7 @@ static THD_FUNCTION(Island_thread, p)
             lift_inPosition() && s1_reset && island_ascend()
             )
           {
-            island_robotSetState(STATE_ROLLER_IN);
+            island_robotSetState(STATE_ROLLER_IN_2);
             roller_in_start = chVTGetSystemTimeX();
           }
         }
@@ -236,24 +250,26 @@ static THD_FUNCTION(Island_thread, p)
           island_state++;
         }
 
-        else if(S2 == ASCEND_MODE &&
-          (lift_inPosition() &&
-            threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL) < threshold[5], 6, &count_left)))
-        {
-          #ifdef ISLAND_AUTO_DRIVE
-            chassis_autoCmd(CHASSIS_DRIVE, 20.0f);
-          #endif
-          island_robotSetState(STATE_ROLLER_IN_LEFT);
-        }
+        // else if(S2 == ASCEND_MODE &&
+        //   (lift_inPosition() &&
+        //     threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL) < threshold[5], 6, &count_left)))
+        // {
+        //   #ifdef ISLAND_AUTO_DRIVE
+        //     chassis_autoCmd(CHASSIS_DRIVE, 20.0f);
+        //   #endif
+        //   island_robotSetState(STATE_ROLLER_IN_LEFT);
+        // }
 
         else if(S2 == ASCEND_MODE &&
           (lift_inPosition() &&
-            threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_DOGBALL) < threshold[5], 6, &count_right)))
+            threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_DOGBALL) < threshold[5], 6, &count_right))
+          && threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_DOGBALL) < threshold[5], 6, &count_left))
         {
           #ifdef ISLAND_AUTO_DRIVE
             chassis_autoCmd(CHASSIS_DRIVE, 20.0f);
           #endif
-            island_robotSetState(STATE_ROLLER_IN_RIGHT);
+            island_state++;
+            island_robotSetState(STATE_CRAW);
         }
 
         else if(s1_reset && island_decend())
@@ -337,13 +353,13 @@ static THD_FUNCTION(Island_thread, p)
         lift_changePos(pos_sp[1]  , pos_sp[1],
           pos_sp[1]  , pos_sp[1]  );
 
-        if(
-          (S2 == ASCEND_MODE && (s1_reset && island_ascend()))||
+        if(lift_inPosition()&&
+          ((S2 == ASCEND_MODE && (s1_reset && island_ascend()))||
           (
             threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_RIGHT_BUM) < threshold[6], 3, &count_back_right) &&
             threshold_count(rangeFinder_getDistance(RANGEFINDER_INDEX_LEFT_BUM) < threshold[6], 3, &count_back_left) &&
-            pIMU->euler_angle[Pitch] > -0.2f
-            )
+            pIMU->euler_angle[Pitch] > -0.1f
+            ))
           )
         {
           if(island_state == STATE_STAIR_1)
@@ -355,7 +371,7 @@ static THD_FUNCTION(Island_thread, p)
         }
         else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
           island_robotSetState(STATE_RUSHDOWN_1);
-        else if((s1_reset && island_decend()) || pIMU->euler_angle[Pitch] < -0.2f)
+        else if((s1_reset && island_decend()) || pIMU->euler_angle[Pitch] < -0.1f)
         {
           #ifdef ISLAND_AUTO_DRIVE
             chassis_autoCmd(CHASSIS_DRIVE, 20.0f);
@@ -442,9 +458,9 @@ static THD_FUNCTION(Island_thread, p)
 
         chassis_headingLockCmd(DISABLE);
 
-        if(chVTGetSystemTimeX() > pour_ammo_time + MS2ST(500))
+        if(chVTGetSystemTimeX() > pour_ammo_time + MS2ST(200))
         {
-          gripper_changePos(gripper_pos_sp[0], gripper_pos_sp[5]); //strech out. close hand
+          gripper_changePos(gripper_pos_sp[0], gripper_pos_sp[5]); //strech away. close hand
           gripper_release_time = chVTGetSystemTimeX();
           island_robotSetState(STATE_ISLAND_5);
         }
@@ -456,7 +472,7 @@ static THD_FUNCTION(Island_thread, p)
 
         chassis_headingLockCmd(DISABLE);
 
-        if(chVTGetSystemTimeX() > gripper_release_time + MS2ST(400))
+        if(chVTGetSystemTimeX() > gripper_release_time + MS2ST(100))
         {
           gripper_changePos(gripper_pos_sp[0], gripper_pos_sp[4]); //strech out. open hand
           if(gripper_inPosition(GRIPPER_HAND))
@@ -488,7 +504,7 @@ static THD_FUNCTION(Island_thread, p)
         chassis_headingLockCmd(ENABLE);
 
         lift_changePos(hero_interact_pos_sp[0]  , hero_interact_pos_sp[0]   ,
-         hero_interact_pos_sp[1] ,hero_interact_pos_sp[1]  );
+         hero_interact_pos_sp[0] ,hero_interact_pos_sp[0]  );
         if(lift_inPosition()){
           if(S2 == LOCK_MODE && (s1_reset && island_ascend()))
             island_robotSetState(STATE_HERO_INTERACT_3);
@@ -612,8 +628,8 @@ static THD_FUNCTION(Island_thread, p)
         chassis_setSpeedLimit(ISLAND_SPEED_LIMIT_HIGH);
         chassis_setAcclLimit(100U);
 
-        if(lift_inPosition()
-          && threshold_count(pIMU->euler_angle[Pitch] < threshold[1], 3, &count))
+        if((lift_inPosition()
+          && threshold_count(pIMU->euler_angle[Pitch] < threshold[1], 3, &count)))
         {
           island_robotSetState(STATE_RUSHDOWN_2);
         }
@@ -630,27 +646,27 @@ static THD_FUNCTION(Island_thread, p)
         chassis_headingLockCmd(DISABLE);
         lift_set_state(LIFT_SUSPEND_B);
 
-        if(threshold_count(pIMU->euler_angle[Pitch] < threshold[3], 3, &count))
-        {
+        // if(threshold_count(pIMU->euler_angle[Pitch] < threshold[3], 3, &count))
+        // {
 
-          if(island_state == STATE_STAIR_2){
-            island_state = STATE_STAIR_1;
-            island_robotSetState(STATE_RUSHDOWN_1);
-            lift_set_state(LIFT_RUNNING);
-            count = 0;
-          }
+        //   if(island_state == STATE_STAIR_2){
+        //     island_state = STATE_STAIR_1;
+        //     island_robotSetState(STATE_RUSHDOWN_1);
+        //     lift_set_state(LIFT_RUNNING);
+        //     count = 0;
+        //   }
 
-          else if(island_state == STATE_STAIR_1){
-            island_state = STATE_STAIR_0;
-            island_robotSetState(STATE_GROUND);
-            lift_set_state(LIFT_RUNNING);
-            count = 0;
-          }
-        }
-        else if(S2 == DECEND_MODE && (s1_reset && island_decend()))
+        //   else if(island_state == STATE_STAIR_1){
+        //     island_state = STATE_STAIR_0;
+        //     island_robotSetState(STATE_GROUND);
+        //     lift_set_state(LIFT_RUNNING);
+        //     count = 0;
+        //   }
+        // }
+        if(S2 == DECEND_MODE && (s1_reset && island_decend()))
         {
           if(island_state != STATE_STAIR_0)
-            island_state--;
+            island_state = 0;
 
           island_robotSetState(STATE_GROUND);
           lift_set_state(LIFT_RUNNING);
@@ -673,7 +689,7 @@ static THD_FUNCTION(Island_thread, p)
   static const char PosSubName[] = "ArmAway ArmOut ArmIn ArmUp Open Close";
 
   static const char PosInteractName[] = "Hero interact";
-  static const char PosInteractSubName[] = "front back rescue_up rescue_down ";
+  static const char PosInteractSubName[] = "front back";
 
 
 

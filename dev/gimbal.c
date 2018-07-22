@@ -314,7 +314,7 @@ void gimbal_ToStable()
 #define STALL_COUNT_MAX 100U
 void gimbal_calibrate(void){
   bool init_state = false;
-
+  gimbal_state = GIMBAL_INITING;
   float prev_pos;
 
   uint8_t stall_count = 0;

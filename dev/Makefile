@@ -133,7 +133,7 @@ CSRC = $(STARTUPSRC) \
        calibrate_sensor.c\
        exti.c imu_temp.c chassis.c lift.c island_ground.c\
        sdlog.c rangefinder.c gripper.c judge.c \
-       gimbal.c
+       gimbal.c custom_data.c
 
 
 # C++ sources that can be compiled in ARM or THUMB mode depending on the global

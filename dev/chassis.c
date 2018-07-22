@@ -28,7 +28,7 @@ static float   rc_speed_limit_sp = 1.0f;
 static float   rc_speed_limit    = 1.0f; //value from 0 ~ 1
 static float   rc_accl_limit     = 100.0f;  //value from 0-100
 static float   heading_sp;
-
+static int heading_count = 0;
 #define chassis_canUpdate()   \
   (can_motorSetCurrent(CHASSIS_CAN, CHASSIS_CAN_EID, \
     0, 0, 0, 0))
@@ -380,6 +380,7 @@ void chassis_killAutoDriver(void)
   chassis.heading_cmd = 0.0f;
 }
 
+#define HEADING_LOCK_THRESHOLD 1.0f
 static THD_WORKING_AREA(chassis_control_wa, 2048);
 static THD_FUNCTION(chassis_control, p)
 {
@@ -468,9 +469,21 @@ static THD_FUNCTION(chassis_control, p)
           heading_sp = chassis.heading_cmd;
         else
         {
-          float dt = ST2US(chVTGetSystemTimeX() - last_tick)/1e6f;
-          last_tick = chVTGetSystemTimeX();
-          heading_sp -= heading_input * dt;
+          static uint32_t headingLock_cnt;          
+
+          if(ABS(heading_input)>HEADING_LOCK_THRESHOLD)
+            headingLock_cnt = 0;
+          else
+            headingLock_cnt++;
+
+          if(headingLock_cnt > 200)
+          {
+            const float dt = 1.0f/CHASSIS_UPDATE_FREQ;
+            heading_sp -= heading_input * dt;
+          }
+          else
+            heading_sp =  pIMU->euler_angle[Yaw]; //Disable heading lock function
+
         }
 
         float error = heading_sp - pIMU->euler_angle[Yaw];
@@ -479,10 +492,13 @@ static THD_FUNCTION(chassis_control, p)
               sine = sinf(error), cosine = cosf(error);
         drive_vel = cosine * drive + sine * strafe;
         strafe_vel = cosine * strafe - sine * drive;
-
-        heading_vel = heading_controller.kp * error -
+        if(heading_count < 20 && heading_count > 0){
+          heading_vel = 0;
+        }
+        else{
+          heading_vel = heading_controller.kp * error -
                       heading_controller.kd * pIMU->d_euler_angle[Yaw];
-
+        }
         static uint32_t error_count = 0;
         if(error > 0.2f || error < -0.2f) //Stuck protection
           error_count++;
@@ -490,10 +506,10 @@ static THD_FUNCTION(chassis_control, p)
           error_count = 0;
 
         if(error_count > 2000U)
-        (
+        {
           heading_vel = 0.0f;
           heading_sp = pIMU->euler_angle[Yaw];
-        )
+        }
 
         heading_vel += heading_input; //Feed_forward term, only used in manual input mode;
         bound(&heading_vel, HEADING_MAX);

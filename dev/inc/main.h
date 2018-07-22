@@ -29,7 +29,7 @@
 #include "judge.h"
 #include "imu_temp.h"
 #include "sdlog.h"
-
+#include "custom_data.h"
 void shellStart(void);
 
 bool power_check(void);
