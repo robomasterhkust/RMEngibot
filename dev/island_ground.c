@@ -110,12 +110,16 @@ static THD_FUNCTION(Island_thread, p)
     if(rc->keyboard.key_code & KEY_E){
       gimbal_calibrate();
     }
+    if(rc->keyboard.key_code & KEY_R){
+      island_robotSetSatate(STATE_GROUND);
+      island_state = 0;
+    }
     /* robot_state controller for island climbing machine*/
     if(S1 == S1_RESET)
     {
       s1_reset = true;
     }
-
+    
     uint8_t prev_state = robot_state;
 
   //  if(robot_state == STATE_GROUND || (robot_state <= STATE_RUSHDOWN_2 && robot_state >= STATE_HERO_INTERACT_1 ))

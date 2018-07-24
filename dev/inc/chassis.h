@@ -120,7 +120,6 @@ void chassis_setAcclLimit(const float accl_limit);
 void chassis_reverseCmd(const uint8_t cmd);
 void chassis_headingLockCmd(const uint8_t cmd);
 void chassis_autoCmd(const uint8_t dir, const float cmd);
-
 chassisStruct* chassis_get(void);
 uint32_t chassis_getError(void);
 
