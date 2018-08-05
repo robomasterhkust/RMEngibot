@@ -47,12 +47,12 @@ void island_robotSetState(robot_state_t state)
 
 static inline bool island_ascend(void)
 {
-  return rc->rc.s1 == S1_ASCEND || (rc->keyboard.key_code & KEY_F);
+  return rc->rc.s1 == S1_ASCEND;
 }
 
 static inline bool island_decend(void)
 {
-  return rc->rc.s1 == S1_DECEND || (rc->keyboard.key_code & KEY_R);
+  return rc->rc.s1 == S1_DECEND;
 }
 
 static THD_WORKING_AREA(Island_thread_wa, 1024);
@@ -111,7 +111,7 @@ static THD_FUNCTION(Island_thread, p)
       gimbal_calibrate();
     }
     if(rc->keyboard.key_code & KEY_R){
-      island_robotSetSatate(STATE_GROUND);
+      robot_state = STATE_GROUND;
       island_state = 0;
     }
     /* robot_state controller for island climbing machine*/

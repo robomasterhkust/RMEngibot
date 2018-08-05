@@ -132,11 +132,11 @@ int main(void) {
   RC_init();
   judgeinit();
 
-  // while(!power_check())
-  // {
-  //   system_setTempWarningFlag();
-  //   chThdSleepMilliseconds(100);
-  // }
+  while(!power_check())
+  {
+    system_setTempWarningFlag();
+    chThdSleepMilliseconds(100);
+  }
 
   /* Init sequence 3: actuators, display*/
   gimbal_init();

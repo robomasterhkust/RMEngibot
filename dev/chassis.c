@@ -548,15 +548,6 @@ void chassis_init(void)
   params_set(&motor_vel_controllers[BACK_LEFT], 11,2,BLvelName,subname_PI,PARAM_PUBLIC);
   params_set(&motor_vel_controllers[BACK_RIGHT], 12,2,BRvelName,subname_PI,PARAM_PUBLIC);
 
-
-  params_set(&motor_pos_controllers[FRONT_LEFT], 3,2,FLposName,subname_PI,PARAM_PUBLIC);
-  params_set(&motor_pos_controllers[FRONT_RIGHT], 4,2,FRposName,subname_PI,PARAM_PUBLIC);
-  params_set(&motor_pos_controllers[BACK_LEFT], 5,2,BLposName,subname_PI,PARAM_PUBLIC);
-  params_set(&motor_pos_controllers[BACK_RIGHT], 6,2,BRposName,subname_PI,PARAM_PUBLIC);
-
-
-
-
   params_set(&heading_controller, 17,3,HeadingName,subname_PID,PARAM_PUBLIC);
 
   for (i = 0; i < 4; i++)
